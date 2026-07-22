@@ -170,14 +170,14 @@ class GolfDataset(Dataset):
         f3 = cv2.cvtColor(f3, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
 
         stacked = np.concatenate([f1, f2, f3], axis=2)
-        X = torch.from_numpy(stacked).permute(2,0,1)
+        X = torch.from_numpy(stacked).permute(2,0,1).float()
 
         if row3['visibility'] == 1:
             hm = generate_heatmap(row3['x'], row3['y'], INFER_W, INFER_H)
         else:
             hm = np.zeros((INFER_H, INFER_W), dtype=np.float32)
             
-        Y = torch.from_numpy(hm).unsqueeze(0)
+        Y = torch.from_numpy(hm).unsqueeze(0).float()
         return X, Y
 
 # ---------------------------------------------------------------
