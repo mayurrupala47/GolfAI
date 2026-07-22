@@ -1,0 +1,62 @@
+{
+    "source_resolution": [
+        640,
+        360
+    ],
+    "playable_area": [
+        [
+            603,
+            329
+        ],
+        [
+            2,
+            354
+        ],
+        [
+            3,
+            4
+        ],
+        [
+            635,
+            4
+        ]
+    ],
+    "ignore_regions": [
+        {
+            "name": "Tee 1",
+            "type": "circle",
+            "x": 571,
+            "y": 233,
+            "radius": 25
+        },
+        {
+            "name": "Cup 1",
+            "type": "circle",
+            "x": 88,
+            "y": 264,
+            "radius": 18
+        },
+        {
+            "name": "Pipes 1",
+            "type": "polygon",
+            "points": [
+                [
+                    386,
+                    80
+                ],
+                [
+                    376,
+                    150
+                ],
+                [
+                    206,
+                    153
+                ],
+                [
+                    223,
+                    69
+                ]
+            ]
+        }
+    ]
+}

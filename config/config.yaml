@@ -1,0 +1,52 @@
+camera:
+  id: CAM-01
+  hole: 1
+
+video:
+  input: assets/input.mp4
+  output: outputs/output.mp4
+  pixels_per_meter: 200.0  # Conversion ratio: number of pixels representing 1 meter in real world
+
+ball:
+  expected_diameter: 18    # Expected diameter of the ball in pixels (at processing resolution)
+  diameter_tolerance: 8    # Tolerance allowed around expected diameter
+
+motion:
+  stop_speed: 0.12         # Speed threshold (m/s) below which the ball is considered stopped
+  moving_speed: 0.15       # Lowered from 0.30 to allow very gentle putts to exceed stroke speed
+  minimum_distance: 0.05   # Lowered from 0.15 to allow short 5cm taps near the cup to count as strokes
+  ready_delay_frames: 10   # Consecutive frames speed must stay below stop_speed to become READY
+  stop_delay_frames: 15    # Consecutive frames speed must stay below stop_speed to become STOPPED from MOVING
+  acceleration_threshold: 0.5 # Lowered from 1.0 to ensure soft impacts are registered
+
+stroke:
+  min_stroke_displacement_px: 20  # Min pixel displacement from last resting position to auto-count a gap stroke
+  stroke_cooldown_frames: 60       # Min frames between any two strokes (60 = 2.0 seconds at 30fps)
+
+tracking:
+  max_lost_frames: 150     # Number of frames a track can go undetected before deletion
+  search_window: 200       # Search window radius in pixels around predicted Kalman position
+
+classic_detector:
+  min_area: 25.0
+  max_area: 600.0
+  circularity_thresh: 0.50
+
+processing:
+  resize_width: 640       # Standardized processing width in pixels (640 is optimal for RPi3)
+  use_roi: true            # Whether to apply playable area ROI mask
+  roi_radius: 120          # ROI crop radius (px) around predicted ball center when STOPPED/READY
+  roi_moving_radius: 220   # Larger ROI radius when ball is MOVING (faster shots travel further per frame)
+  # RPi3 tip: do NOT use --frame-skip — it causes gentle/soft strokes to be missed.
+  # The ROI-based detector already processes every frame at ~10x less pixel cost.
+
+mqtt:
+  host: localhost
+  port: 1883
+  topic: minigolf/stroke
+  client_id: minigolf-ai-tracker
+
+yolo_detector:
+  model_path: "models/multicolor_detector_model.pt"
+  confidence_threshold: 0.75  # Set to 0.75 for optimal detection vs noise filtering
+  class_id: 0                 # Custom models only have 1 class: 'golf-ball' (index 0)

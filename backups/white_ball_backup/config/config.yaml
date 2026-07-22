@@ -1,0 +1,43 @@
+camera:
+  id: CAM-01
+  hole: 1
+
+video:
+  input: assets/input.mp4
+  output: outputs/output.mp4
+  pixels_per_meter: 200.0  # Conversion ratio: number of pixels representing 1 meter in real world
+
+ball:
+  expected_diameter: 18    # Expected diameter of the ball in pixels (at processing resolution)
+  diameter_tolerance: 8    # Tolerance allowed around expected diameter
+
+motion:
+  stop_speed: 0.12         # Speed threshold (m/s) below which the ball is considered stopped
+  moving_speed: 0.30       # Adjusted speed threshold (m/s) for mock data detection
+  minimum_distance: 0.15   # Minimum travel distance (meters) required to register a valid stroke
+  ready_delay_frames: 10   # Consecutive frames speed must stay below stop_speed to become READY
+  stop_delay_frames: 15    # Consecutive frames speed must stay below stop_speed to become STOPPED from MOVING
+  acceleration_threshold: 1.0 # Minimum acceleration (m/s^2) for registering a stroke
+
+stroke:
+  min_stroke_displacement_px: 100  # Min pixel displacement from last resting position to auto-count a gap stroke
+  stroke_cooldown_frames: 180       # Min frames between any two strokes (180 = 3.0 seconds at 60fps)
+
+tracking:
+  max_lost_frames: 45      # Number of frames a track can go undetected before deletion
+  search_window: 200       # Search window radius in pixels around predicted Kalman position
+
+classic_detector:
+  min_area: 25.0
+  max_area: 600.0
+  circularity_thresh: 0.50
+
+processing:
+  resize_width: 1280       # Standardized processing width in pixels
+  use_roi: true            # Whether to apply playable area ROI mask
+
+mqtt:
+  host: localhost
+  port: 1883
+  topic: minigolf/stroke
+  client_id: minigolf-ai-tracker

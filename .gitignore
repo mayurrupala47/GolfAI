@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.mp4
+*.zip
+datasets/
+multicolor_dataset/
+auto_dataset*/
+outputs/
+*.txt
+.vscode/
+.idea/
+yolo11n.pt
+yolo26n.pt
+yolo11n.onnx
+models/*_openvino_model/
