@@ -191,8 +191,8 @@ train_size = int(0.8 * len(dataset))
 val_size = len(dataset) - train_size
 train_ds, val_ds = torch.utils.data.random_split(dataset, [train_size, val_size])
 
-train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=2)
-val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=2)
+train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=0)
+val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=0)
 
 model = TrackNetV2().to(DEVICE)
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
