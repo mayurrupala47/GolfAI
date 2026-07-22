@@ -179,8 +179,15 @@ class KalmanBallTracker(IBallTracker):
                 cx, cy = det["center"]
                 dist = ((cx - px)**2 + (cy - py)**2)**0.5
                 
-                # A resting ball cannot physically jump > 40px in a single frame. Discard shoes/shadows/noise.
-                if state in ["STOPPED", "READY"] and dist > 40.0:
+                # A resting ball cannot move > 30px away from its locked resting anchor position!
+                anchor = self.tracks[tid].get("resting_anchor")
+                if state in ["STOPPED", "READY"] and anchor is not None:
+                    dist_from_anchor = math.sqrt((cx - anchor[0])**2 + (cy - anchor[1])**2)
+                    if dist_from_anchor > 30.0:
+                        continue  # Discard shoes/shadows/noise creeping away from resting anchor
+                        
+                # A resting ball cannot physically jump > 35px in a single frame (regardless of color)
+                if state in ["STOPPED", "READY"] and dist > 35.0:
                     continue
                     
                 # Color match weighting: Detections matching the locked ball color are prioritized over putter heads/shadows
@@ -189,10 +196,6 @@ class KalmanBallTracker(IBallTracker):
                 
                 # A resting ball cannot associate with non-matching color objects (shoes/shadows) > 15px away
                 if state in ["STOPPED", "READY"] and locked_color != "unknown" and det_color != locked_color and dist > 15.0:
-                    continue
-                    
-                # A resting ball cannot physically jump > 35px in a single frame (regardless of color)
-                if state in ["STOPPED", "READY"] and dist > 35.0:
                     continue
                     
                 if locked_color != "unknown" and det_color != locked_color:
@@ -252,9 +255,10 @@ class KalmanBallTracker(IBallTracker):
                     self.tracks[tid]["color"] = self.tracks[tid].get("color", "unknown")
                 self.tracks[tid]["last_matched_center"] = det["center"]
                 self.tracks[tid]["frames_on_anchor"] = 0  # Reset: got a real detection
-                # Update resting anchor whenever the ball is confirmed at a stationary position
+                # Lock resting anchor ONCE when stationary so it does not drift with transient noise/shoes
                 if state in ["STOPPED", "READY"]:
-                    self.tracks[tid]["resting_anchor"] = det["center"]
+                    if "resting_anchor" not in self.tracks[tid]:
+                        self.tracks[tid]["resting_anchor"] = det["center"]
                 else:
                     # Ball is moving — clear the anchor so it doesn't snap back
                     self.tracks[tid].pop("resting_anchor", None)
