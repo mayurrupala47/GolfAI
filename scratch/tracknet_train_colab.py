@@ -13,6 +13,7 @@ import argparse
 import time
 import numpy as np
 import cv2
+cv2.setNumThreads(0)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -39,7 +40,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--video', default='/content/GolfAI/orange_right_1.mp4')
 parser.add_argument('--yolo-model', default='/content/GolfAI/models/multicolor_detector_model.pt')
 parser.add_argument('--epochs', type=int, default=15)
-parser.add_argument('--batch-size', type=int, default=4)
+parser.add_argument('--batch-size', type=int, default=2)
 parser.add_argument('--lr', type=float, default=1e-4)
 parser.add_argument('--output', default='/content/GolfAI/models/tracknet_minigolf.pt')
 args = parser.parse_args()
