@@ -199,6 +199,8 @@ class KalmanBallTracker(IBallTracker):
                     continue
                     
                 if locked_color != "unknown" and det_color != locked_color:
+                    if disappeared > 0:
+                        continue  # Discard! A lost ball cannot re-appear as a completely different color (shoe/turf)
                     effective_dist += 150.0  # Penalize non-matching objects (putter heads/shadows)
                     
                 if effective_dist < best_dist:
@@ -287,8 +289,8 @@ class KalmanBallTracker(IBallTracker):
                 #         Update anchor to real position + accumulate color votes. No stroke.
                 # Zone 2: detection beyond 100px of anchor → ball was HIT
                 #         Clear anchor, signal stroke engine to count stroke.
-                best_near_det = None   # closest detection within 100px (ball at tee)
-                best_near_dist = 100.0
+                best_near_det = None   # closest detection within 30px (ball resting at anchor)
+                best_near_dist = 30.0
                 best_far_det = None    # furthest detection beyond 100px (ball hit)
                 best_far_dist = 100.0
 
@@ -297,7 +299,13 @@ class KalmanBallTracker(IBallTracker):
                         continue
                     ecx, ecy = det["center"]
                     dist_from_anchor = math.sqrt((ecx - anchor[0])**2 + (ecy - anchor[1])**2)
-                    if dist_from_anchor <= 100.0 and dist_from_anchor < best_near_dist:
+                    det_color = det.get("color", "unknown")
+                    
+                    # Color check: if color is locked, candidate MUST match locked color!
+                    if locked_color != "unknown" and det_color != "unknown" and det_color != locked_color:
+                        continue
+
+                    if dist_from_anchor <= 30.0 and dist_from_anchor < best_near_dist:
                         best_near_dist = dist_from_anchor
                         best_near_det = (idx, det)
                     elif dist_from_anchor > 100.0 and dist_from_anchor > best_far_dist:

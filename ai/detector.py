@@ -511,7 +511,14 @@ class YoloOnlyBallDetector(IBallDetector):
                             # Offset crop coordinates back to full frame
                             detections.append((crop_x1 + xyxy[0], crop_y1 + xyxy[1], crop_x1 + xyxy[2], crop_y1 + xyxy[3], conf, color))
                     if len(detections) > 1:
-                        detections.sort(key=lambda d: (0 if d[5] != "unknown" else 1, -d[4]))
+                        if hint_center is not None:
+                            hc_x, hc_y = hint_center
+                            detections.sort(key=lambda d: (
+                                0 if d[5] != "unknown" else 1,
+                                math.sqrt(((d[0] + d[2]) / 2.0 - hc_x)**2 + ((d[1] + d[3]) / 2.0 - hc_y)**2)
+                            ))
+                        else:
+                            detections.sort(key=lambda d: (0 if d[5] != "unknown" else 1, -d[4]))
                 
                 # If we missed inside the crop, fall back to full frame search
                 if len(detections) == 0:
