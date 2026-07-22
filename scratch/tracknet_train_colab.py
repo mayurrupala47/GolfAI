@@ -214,7 +214,7 @@ for epoch in range(args.epochs):
     train_loss = 0
     t0 = time.time()
     
-    for X, Y in train_loader:
+    for i, (X, Y) in enumerate(train_loader):
         X, Y = X.to(DEVICE), Y.to(DEVICE)
         optimizer.zero_grad()
         pred = model(X)
@@ -222,6 +222,8 @@ for epoch in range(args.epochs):
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
+        if i % 50 == 0:
+            print(f"  Epoch {epoch+1} - Batch {i}/{len(train_loader)} - Loss: {loss.item():.4f}", end='\r')
         
     model.eval()
     val_loss = 0
