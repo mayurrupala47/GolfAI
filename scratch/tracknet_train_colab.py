@@ -59,7 +59,7 @@ yolo_path = args.yolo_model if os.path.exists(args.yolo_model) else 'yolov8n.pt'
 yolo = YOLO(yolo_path)
 
 cap = cv2.VideoCapture(args.video)
-frames_dir = '/content/dataset_frames'
+frames_dir = getattr(args, 'frames_dir', './dataset_frames')
 os.makedirs(frames_dir, exist_ok=True)
 
 labels = []
@@ -76,14 +76,29 @@ while True:
     resized = cv2.resize(frame, (INFER_W, INFER_H))
     cv2.imwrite(f"{frames_dir}/{fi:05d}.jpg", resized)
     
+    # Auto-detect if using COCO or custom single-class model
+    target_class = 0
+    if len(yolo.names) > 32 and yolo.names[32] == "sports ball":
+        target_class = 32
+        
     res = yolo(frame, imgsz=640, conf=0.15, verbose=False)
     bx, by = None, None
     if res and len(res[0].boxes) > 0:
-        box = res[0].boxes[0]
-        x1, y1, x2, y2 = box.xyxy[0].tolist()
-        # Scale to TrackNet coordinates
-        bx = ((x1+x2)/2) / VW * INFER_W
-        by = ((y1+y2)/2) / VH * INFER_H
+        # Find the box with highest confidence that matches our target class
+        best_conf = 0
+        best_box = None
+        for box in res[0].boxes:
+            cls_id = int(box.cls[0].item())
+            conf = float(box.conf[0].item())
+            if cls_id == target_class and conf > best_conf:
+                best_conf = conf
+                best_box = box
+                
+        if best_box is not None:
+            x1, y1, x2, y2 = best_box.xyxy[0].tolist()
+            # Scale to TrackNet coordinates
+            bx = ((x1+x2)/2) / VW * INFER_W
+            by = ((y1+y2)/2) / VH * INFER_H
         
     labels.append({'frame': fi, 'x': bx, 'y': by})
     fi += 1
@@ -97,7 +112,7 @@ df['y'] = df['y'].interpolate(method='linear', limit=10)
 df['visibility'] = df['x'].notna().astype(int)
 
 df.fillna(0, inplace=True)
-df.to_csv('/content/labels.csv', index=False)
+df.to_csv('./labels.csv', index=False)
 print(f"Generated {len(df)} labels. Visible/Interpolated frames: {df['visibility'].sum()}")
 
 # ---------------------------------------------------------------
@@ -162,15 +177,26 @@ class GolfDataset(Dataset):
         row2 = self.df.iloc[self.valid_indices[idx]-1]
         row1 = self.df.iloc[self.valid_indices[idx]-2]
 
-        f1 = cv2.imread(f"{self.frames_dir}/{int(row1['frame']):05d}.jpg")
-        f2 = cv2.imread(f"{self.frames_dir}/{int(row2['frame']):05d}.jpg")
-        f3 = cv2.imread(f"{self.frames_dir}/{int(row3['frame']):05d}.jpg")
+        path1 = f"{self.frames_dir}/{int(row1['frame']):05d}.jpg"
+        path2 = f"{self.frames_dir}/{int(row2['frame']):05d}.jpg"
+        path3 = f"{self.frames_dir}/{int(row3['frame']):05d}.jpg"
         
-        f1 = cv2.cvtColor(f1, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-        f2 = cv2.cvtColor(f2, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-        f3 = cv2.cvtColor(f3, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-
-        stacked = np.concatenate([f1, f2, f3], axis=2)
+        f1 = cv2.imread(path1)
+        f2 = cv2.imread(path2)
+        f3 = cv2.imread(path3)
+        
+        try:
+            f1 = cv2.cvtColor(f1, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+            f2 = cv2.cvtColor(f2, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+            f3 = cv2.cvtColor(f3, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+            stacked = np.concatenate([f1, f2, f3], axis=2)
+        except Exception as e:
+            print(f"\n[DATALOADER ERROR] Failed to load or concatenate frames.")
+            print(f"Paths: {path1}, {path2}, {path3}")
+            print(f"f1: {type(f1)} {f1.shape if isinstance(f1, np.ndarray) else ''}")
+            print(f"f2: {type(f2)} {f2.shape if isinstance(f2, np.ndarray) else ''}")
+            print(f"f3: {type(f3)} {f3.shape if isinstance(f3, np.ndarray) else ''}")
+            raise e
         X = torch.from_numpy(stacked).permute(2,0,1).float()
 
         if row3['visibility'] == 1:
