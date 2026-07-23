@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
-from ai.detector import YoloBallDetector, MockBallDetector, ClassicBallDetector, HybridYoloBallDetector, YoloOnlyBallDetector, CustomYoloOpenCVHybridDetector, HybridBallDetector
+from ai.detector import YoloBallDetector, MockBallDetector, ClassicBallDetector, HybridYoloBallDetector, YoloOnlyBallDetector, CustomYoloOpenCVHybridDetector, HybridBallDetector, TrackNetOnlyDetector
 from ai.opencv_detector import OpenCVBallDetector
 from ai.tracker import ByteBallTracker
 from ai.kalman_tracker import KalmanBallTracker
@@ -389,9 +389,9 @@ def main():
     parser.add_argument(
         "--detector",
         type=str,
-        choices=["classic", "yolo", "yolo-hybrid", "yolo-only", "openvino", "tracknet"],
+        choices=["classic", "yolo", "yolo-hybrid", "yolo-only", "openvino", "tracknet", "tracknet-only"],
         default="classic",
-        help="Detector to use: 'classic' (OpenCV HSV), 'yolo' (Hybrid COCO), 'yolo-hybrid', 'yolo-only' (Custom YOLO), 'openvino', or 'tracknet'"
+        help="Detector to use: 'classic' (OpenCV HSV), 'yolo' (Hybrid COCO), 'yolo-hybrid', 'yolo-only', 'openvino', 'tracknet' (TrackNet+HSV), or 'tracknet-only' (TrackNet without color processing)"
     )
     parser.add_argument(
         "--rtsp-transport",
@@ -500,6 +500,9 @@ def main():
     if detector_type == "tracknet":
         logger.info("Configuring Hybrid TrackNet + HSV Color Detector (NEW PIPELINE)...")
         detector = HybridBallDetector()
+    elif detector_type == "tracknet-only":
+        logger.info("Configuring Pure TrackNet Detector (No color processing)...")
+        detector = TrackNetOnlyDetector()
     elif detector_type == "yolo-hybrid":
         logger.info("Configuring Option A: Custom YOLO Lock-on + OpenCV Tracking Detector...")
         detector = CustomYoloOpenCVHybridDetector(config)
