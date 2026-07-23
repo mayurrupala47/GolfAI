@@ -157,7 +157,89 @@ class YoloBallDetector(IBallDetector):
         return detections
 
 
-class MockBallDetector(IBallDetector):
+class HybridBallDetector(IBallDetector):
+    """
+    Hybrid Golf Ball Detector:
+    Uses TrackNetV2 for sub-pixel, motion-blur resilient positional tracking.
+    Uses HSV Heuristics (classify_ball_color) on a tiny cropped ROI for color identification.
+    """
+    def __init__(self, tracknet_weights: str = "models/TrackNet_best.pt", conf_threshold: float = 0.1):
+        from ai.tracknet_tracker import TrackNetEngine
+        self.engine = TrackNetEngine(weights_path=tracknet_weights, conf_threshold=conf_threshold)
+        
+        self.calibration_path = "config/calibration.json"
+        self.ignore_regions = []
+        if os.path.exists(self.calibration_path):
+            try:
+                with open(self.calibration_path, "r") as f:
+                    cal_data = json.load(f)
+                for region in cal_data.get("ignore_regions", []):
+                    if "tee" not in region.get("name", "").lower():
+                        self.ignore_regions.append(region)
+                for cup in cal_data.get("target_holes", cal_data.get("target_cups", [])):
+                    if "center" in cup:
+                        self.ignore_regions.append({
+                            "name": "auto_cup_ignore",
+                            "x": cup["center"][0],
+                            "y": cup["center"][1],
+                            "radius": cup.get("radius", 50.0)
+                        })
+                logger.info(f"HybridDetector loaded {len(self.ignore_regions)} ignore regions.")
+            except Exception as e:
+                logger.error(f"HybridDetector failed to load calibration: {e}")
+
+    def detect(self, frame: np.ndarray) -> List[Tuple[float, float, float, float, float, str]]:
+        h, w, _ = frame.shape
+        pos, conf = self.engine.update(frame)
+        
+        if pos is None:
+            return []
+            
+        cx, cy = pos
+        
+        # Filter out custom ignore zones
+        is_ignored = False
+        cal_res = [3840, 2160]
+        if os.path.exists(self.calibration_path):
+            try:
+                with open(self.calibration_path, "r") as f:
+                    cal_res = json.load(f).get("source_resolution", [3840, 2160])
+            except:
+                pass
+        
+        scale_x = w / cal_res[0]
+        scale_y = h / cal_res[1]
+        
+        for region in self.ignore_regions:
+            if region.get("type") == "polygon" or "points" in region:
+                poly_pts = region["points"]
+                scaled_pts = np.array([[int(p[0] * scale_x), int(p[1] * scale_y)] for p in poly_pts], dtype=np.int32)
+                if cv2.pointPolygonTest(scaled_pts, (cx, cy), False) >= 0:
+                    is_ignored = True
+                    break
+            else:
+                rx = region["x"] * scale_x
+                ry = region["y"] * scale_y
+                rr = region["radius"] * min(scale_x, scale_y)
+                dist = ((cx - rx)**2 + (cy - ry)**2)**0.5
+                if dist <= rr:
+                    is_ignored = True
+                    break
+                    
+        if is_ignored:
+            return []
+            
+        # Create a faux bounding box (32x32) around the centroid for color extraction
+        box_size = 16
+        x1 = max(0, int(cx - box_size))
+        y1 = max(0, int(cy - box_size))
+        x2 = min(w, int(cx + box_size))
+        y2 = min(h, int(cy + box_size))
+        
+        ball_crop = frame[y1:y2, x1:x2]
+        color = classify_ball_color(ball_crop)
+        
+        return [(float(x1), float(y1), float(x2), float(y2), float(conf), color)]
     """
     Mock detector that returns pre-recorded positions.
     Useful for testing without neural network models or GPUs.
