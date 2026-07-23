@@ -1,12 +1,13 @@
 import torch
 import os
 import sys
+import argparse
 
 # Add root dir to path so we can import ai module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ai.tracknet_tracker import TrackNetV2
 
-def export_onnx(weights_path='models/TrackNet_best.pt', output_path='models/TrackNet_best.onnx'):
+def export_onnx(weights_path, output_path):
     print(f"Loading PyTorch weights from {weights_path}...")
     model = TrackNetV2()
     
@@ -39,7 +40,19 @@ def export_onnx(weights_path='models/TrackNet_best.pt', output_path='models/Trac
     )
     print("✅ ONNX export complete!")
     print("\nNext step on your Jetson Orin Nano:")
-    print(f"trtexec --onnx={output_path} --saveEngine=models/TrackNet_best.engine --fp16")
+    print(f"trtexec --onnx={output_path} --saveEngine={output_path.replace('.onnx', '.engine')} --fp16")
 
 if __name__ == '__main__':
-    export_onnx()
+    parser = argparse.ArgumentParser(description="Export TrackNet PyTorch model to ONNX")
+    parser.add_argument("--weights", type=str, default="models/TrackNet_best.pt", help="Path to input .pt weights")
+    parser.add_argument("--output", type=str, default="models/TrackNet_best.onnx", help="Path to output .onnx file")
+    args = parser.parse_args()
+    
+    # Ensure relative paths are resolved from the GolfAI root directory, not the user's cwd
+    golfai_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    weights_path = args.weights if os.path.isabs(args.weights) else os.path.join(golfai_root, args.weights)
+    output_path = args.output if os.path.isabs(args.output) else os.path.join(golfai_root, args.output)
+    
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    export_onnx(weights_path, output_path)
