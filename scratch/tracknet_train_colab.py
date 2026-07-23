@@ -81,7 +81,8 @@ while True:
     if len(yolo.names) > 32 and yolo.names[32] == "sports ball":
         target_class = 32
         
-    res = yolo(frame, imgsz=640, conf=0.15, verbose=False)
+    # AGENTS.md Rule: Custom model requires 0.70 threshold to prevent shoes/putters!
+    res = yolo(frame, imgsz=640, conf=0.70, verbose=False)
     bx, by = None, None
     if res and len(res[0].boxes) > 0:
         # Find the box with highest confidence that matches our target class
