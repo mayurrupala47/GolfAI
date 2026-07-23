@@ -240,6 +240,9 @@ class HybridBallDetector(IBallDetector):
         color = classify_ball_color(ball_crop)
         
         return [(float(x1), float(y1), float(x2), float(y2), float(conf), color)]
+
+
+class MockBallDetector(IBallDetector):
     """
     Mock detector that returns pre-recorded positions.
     Useful for testing without neural network models or GPUs.
