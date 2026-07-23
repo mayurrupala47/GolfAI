@@ -87,7 +87,7 @@ class YoloBallDetector(IBallDetector):
             logger.error(f"Failed to load YOLO model: {e}")
             raise e
 
-    def detect(self, frame: np.ndarray) -> List[Tuple[float, float, float, float, float, str]]:
+    def detect(self, frame: np.ndarray, **kwargs) -> List[Tuple[float, float, float, float, float, str]]:
         """
         Detects sports balls (golf balls) in the current frame.
         
@@ -188,7 +188,7 @@ class HybridBallDetector(IBallDetector):
             except Exception as e:
                 logger.error(f"HybridDetector failed to load calibration: {e}")
 
-    def detect(self, frame: np.ndarray) -> List[Tuple[float, float, float, float, float, str]]:
+    def detect(self, frame: np.ndarray, **kwargs) -> List[Tuple[float, float, float, float, float, str]]:
         h, w, _ = frame.shape
         pos, conf = self.engine.update(frame)
         
