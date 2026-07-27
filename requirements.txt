@@ -1,0 +1,10 @@
+opencv-python
+ultralytics
+supervision
+numpy
+pandas
+filterpy
+paho-mqtt
+PyYAML
+scipy
+flask
