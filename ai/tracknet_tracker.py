@@ -88,30 +88,11 @@ class TrackNetEngine:
         rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
         return rgb.astype(np.float32) / 255.0
 
-    def extract_peak(self, heatmap, orig_w, orig_h, hint_center=None):
-        """Find the peak coordinate in the heatmap, optionally restricted near hint_center."""
-        if hint_center is not None:
-            # Convert hint_center to heatmap resolution coordinates
-            hx_hint = hint_center[0] / orig_w * self.infer_w
-            hy_hint = hint_center[1] / orig_h * self.infer_h
-            
-            # Constraint search area: e.g., 200px search radius in original frame coordinates
-            window_infer = 200.0 / orig_w * self.infer_w
-            
-            # Create circular mask around the hint position
-            h, w = heatmap.shape
-            yy, xx = np.meshgrid(np.arange(w), np.arange(h))
-            dist = (xx - hx_hint)**2 + (yy - hy_hint)**2
-            mask = dist <= window_infer**2
-            
-            # Apply mask to heatmap
-            masked_heatmap = heatmap * mask
-        else:
-            masked_heatmap = heatmap
-
-        idx = np.argmax(masked_heatmap)
-        hy, hx = np.unravel_index(idx, masked_heatmap.shape)
-        conf = float(heatmap[hy, hx]) # keep true confidence from unmasked heatmap
+    def extract_peak(self, heatmap, orig_w, orig_h):
+        """Find the peak coordinate in the heatmap above threshold."""
+        idx = np.argmax(heatmap)
+        hy, hx = np.unravel_index(idx, heatmap.shape)
+        conf = float(heatmap[hy, hx])
         
         if conf < self.conf_threshold:
             return None, conf
@@ -120,7 +101,7 @@ class TrackNetEngine:
         cy = hy / self.infer_h * orig_h
         return (cx, cy), conf
 
-    def update(self, frame, hint_center=None):
+    def update(self, frame):
         """
         Ingest a new frame and return the detected (cx, cy) and confidence.
         Requires 9 frames to output a valid detection.
@@ -145,5 +126,5 @@ class TrackNetEngine:
             heatmaps = self.model(tensor).squeeze(0).cpu().numpy()
             
         # Predict using the last predicted heatmap (corresponding to the current frame)
-        pos, conf = self.extract_peak(heatmaps[-1], orig_w, orig_h, hint_center=hint_center)
+        pos, conf = self.extract_peak(heatmaps[-1], orig_w, orig_h)
         return pos, conf
