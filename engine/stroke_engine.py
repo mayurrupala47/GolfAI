@@ -81,8 +81,8 @@ class StrokeEngine:
                 if sm and sm.state == BallState.MOVING:
                     hint_moving = True
             
-            # If resting and not on check-frame, skip inference
-            if all_resting and (frame_idx % 5 != 0):
+            # If resting and not on check-frame, skip inference (check every 2nd frame)
+            if all_resting and (frame_idx % 2 != 0):
                 skip_inference = True
                 
         if skip_inference:

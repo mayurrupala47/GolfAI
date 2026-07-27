@@ -56,6 +56,8 @@ class BallStateMachine:
         self.ready_position: Optional[Tuple[float, float]] = None  # (x, y) center in pixels
         self.has_exceeded_stroke_speed = False
         self.holed = False
+        self.last_seen_x: Optional[float] = None
+        self.last_seen_y: Optional[float] = None
         
         # Frame index of the last confirmed stroke (used for cooldown guard)
         self.last_stroke_frame: int = -9999
@@ -247,12 +249,18 @@ class BallStateMachine:
         
         # Check if ball has entered a cup or hole
         disappeared = metrics.get("disappeared", 0)
+        if disappeared == 0:
+            self.last_seen_x = curr_x
+            self.last_seen_y = curr_y
         
         # Track frames since tracking was recovered to avoid false mid-roll spikes
         if disappeared > 0:
             self.frames_since_recovery = 0
         else:
             self.frames_since_recovery = getattr(self, "frames_since_recovery", 999) + 1
+
+        eval_x = self.last_seen_x if (disappeared > 0 and self.last_seen_x is not None) else curr_x
+        eval_y = self.last_seen_y if (disappeared > 0 and self.last_seen_y is not None) else curr_y
 
         for item in self.target_holes:
             hx, hy = item[0], item[1]
@@ -261,7 +269,7 @@ class BallStateMachine:
             # If the ball goes missing near the cup, expand the detection zone slightly
             # to catch the ball as it drops below the cup lip out of sight.
             effective_radius = (h_radius + 15.0) if disappeared > 1 else h_radius
-            dist = ((curr_x - hx)**2 + (curr_y - hy)**2)**0.5
+            dist = ((eval_x - hx)**2 + (eval_y - hy)**2)**0.5
             
             # HOLE_COMPLETE only triggers if ball is inside cup AND either stopped/slowing down (<0.25m/s) or disappeared in cup
             if dist < effective_radius and (current_speed < 0.25 or disappeared > 3):
@@ -269,7 +277,7 @@ class BallStateMachine:
                 if not self.holed:
                     self.holed = True
                     hole_complete = True
-                    logger.info(f"[Ball {self.track_id}] Ball entered cup/hole at ({curr_x:.1f}, {curr_y:.1f})! Hole complete with {self.stroke_count} stroke(s).")
+                    logger.info(f"[Ball {self.track_id}] Ball entered cup/hole at ({eval_x:.1f}, {eval_y:.1f})! Hole complete with {self.stroke_count} stroke(s).")
                 return self.state, False, False, hole_complete, False
         
         stroke_detected = False
