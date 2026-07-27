@@ -249,10 +249,10 @@ class KalmanBallTracker(IBallTracker):
                     # Majority vote
                     best_color = max(self.tracks[tid]["color_votes"], key=self.tracks[tid]["color_votes"].get)
                     self.tracks[tid]["color"] = best_color
-                    # Lock color once a single color reaches 5 confident votes
-                    if self.tracks[tid]["color_votes"][best_color] >= 5:
+                    # Lock color once a single color reaches 5 confident                     # Lock color once a single color reaches 2 confident votes
+                    if self.tracks[tid]["color_votes"][best_color] >= 2:
                         self.tracks[tid]["color_locked"] = True
-                        logger.info(f"[Tracker] Ball {tid} color LOCKED as '{best_color.upper()}' after 5 consistent votes.")
+                        logger.info(f"[Tracker] Ball {tid} color LOCKED as '{best_color.upper()}' after 2 consistent votes.")
                 else:
                     self.tracks[tid]["color"] = self.tracks[tid].get("color", "unknown")
                 self.tracks[tid]["last_matched_center"] = det["center"]
@@ -276,7 +276,7 @@ class KalmanBallTracker(IBallTracker):
             state = None
             if track_states and tid in track_states:
                 state = track_states[tid]
-
+ 
             # --- Anchor injection for tracks with a resting anchor ---
             # If the track has a resting anchor, use it to freeze the position and velocity
             # during any frame where it is undetected, regardless of the state machine state.
@@ -293,7 +293,7 @@ class KalmanBallTracker(IBallTracker):
                 best_near_dist = 100.0
                 best_far_det = None    # furthest detection beyond 100px (ball hit)
                 best_far_dist = 100.0
-
+ 
                 for idx, det in enumerate(input_dets):
                     if idx in used_detections:
                         continue
@@ -305,14 +305,14 @@ class KalmanBallTracker(IBallTracker):
                     # it MUST match the locked color to be considered for updates or escape.
                     if locked_color != "unknown" and det_color != "unknown" and det_color != locked_color:
                         continue  # Reject non-matching color (shoe/putter/turf/shadow)
-
+ 
                     if dist_from_anchor <= 100.0 and dist_from_anchor < best_near_dist:
                         best_near_dist = dist_from_anchor
                         best_near_det = (idx, det)
                     elif dist_from_anchor > 100.0 and dist_from_anchor > best_far_dist:
                         best_far_dist = dist_from_anchor
                         best_far_det = (idx, det)
-
+ 
                 # Zone 1: ball near anchor — update anchor to real position, accumulate color
                 if best_near_det is not None:
                     idx, det = best_near_det
@@ -339,10 +339,10 @@ class KalmanBallTracker(IBallTracker):
                         self.tracks[tid]["color_votes"][c] = self.tracks[tid]["color_votes"].get(c, 0) + 1
                         best_color = max(self.tracks[tid]["color_votes"], key=self.tracks[tid]["color_votes"].get)
                         self.tracks[tid]["color"] = best_color
-                        if self.tracks[tid]["color_votes"][best_color] >= 5:
+                        if self.tracks[tid]["color_votes"][best_color] >= 2:
                             self.tracks[tid]["color_locked"] = True
                             logger.info(f"[Tracker] Ball {tid} color LOCKED as '{best_color.upper()}' "
-                                        f"after 5 consistent votes at tee ({ecx:.1f}, {ecy:.1f}).")
+                                        f"after 2 consistent votes at tee ({ecx:.1f}, {ecy:.1f}).")
                     used_detections.add(idx)
                     matched_tids.add(tid)
                     continue
