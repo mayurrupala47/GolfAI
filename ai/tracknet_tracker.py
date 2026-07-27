@@ -101,6 +101,12 @@ class TrackNetEngine:
             self.model.eval()
             if self.device == 'cuda':
                 self.model = self.model.half()
+                try:
+                    print("[TrackNetEngine] Compiling PyTorch model with torch.compile() for max GPU speed...")
+                    self.model = torch.compile(self.model)
+                    print("[TrackNetEngine] torch.compile() compilation successful!")
+                except Exception as e:
+                    print(f"[TrackNetEngine] torch.compile() fallback to eager mode: {e}")
 
     def preprocess(self, frame):
         """Resize and convert to RGB (uint8)"""
