@@ -483,6 +483,18 @@ def main():
         daemon=True
     )
     flask_thread.start()
+    
+    import sys
+    if 'google.colab' in sys.modules:
+        try:
+            from google.colab.output import eval_js
+            colab_url = eval_js("google.colab.kernel.proxyPort(5001)")
+            logger.info("==================================================")
+            logger.info("Running in Google Colab! Access your live localview dashboard here:")
+            logger.info(f"  {colab_url}")
+            logger.info("==================================================")
+        except Exception as e:
+            logger.warning(f"Failed to resolve Google Colab proxy URL: {e}")
 
     # 2. Extract configuration fields
     video_input_path = args.video

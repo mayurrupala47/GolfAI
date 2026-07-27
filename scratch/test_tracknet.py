@@ -22,13 +22,12 @@ while True:
     pos, conf = engine.update(frame)
     if pos:
         found += 1
+        print(f"Frame {frames:02d}: Ball detected at {pos} (conf={conf:.3f})")
+    else:
+        print(f"Frame {frames:02d}: No detection (conf={conf:.3f})")
     
     frames += 1
-    if frames % 100 == 0:
-        print(f"Processed {frames} frames...")
-        
-    # Just run 500 frames for a quick local test
-    if frames >= 500:
+    if frames >= 50:
         break
 
 cap.release()

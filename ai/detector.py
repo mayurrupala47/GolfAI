@@ -190,7 +190,8 @@ class HybridBallDetector(IBallDetector):
 
     def detect(self, frame: np.ndarray, **kwargs) -> List[Tuple[float, float, float, float, float, str]]:
         h, w, _ = frame.shape
-        pos, conf = self.engine.update(frame)
+        hint_center = kwargs.get("hint_center")
+        pos, conf = self.engine.update(frame, hint_center=hint_center)
         
         if pos is None:
             return []
@@ -275,7 +276,8 @@ class TrackNetOnlyDetector(IBallDetector):
 
     def detect(self, frame: np.ndarray, **kwargs) -> List[Tuple[float, float, float, float, float, str]]:
         h, w, _ = frame.shape
-        pos, conf = self.engine.update(frame)
+        hint_center = kwargs.get("hint_center")
+        pos, conf = self.engine.update(frame, hint_center=hint_center)
         
         if pos is None:
             return []

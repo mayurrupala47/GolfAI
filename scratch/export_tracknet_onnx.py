@@ -5,25 +5,25 @@ import argparse
 
 # Add root dir to path so we can import ai module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ai.tracknet_tracker import TrackNetV2
+from ai.tracknet_tracker import TrackNetV3
 
 def export_onnx(weights_path, output_path):
     print(f"Loading PyTorch weights from {weights_path}...")
-    model = TrackNetV2()
+    model = TrackNetV3()
     
     try:
         ckpt = torch.load(weights_path, map_location='cpu', weights_only=False)
         state = ckpt.get('model', ckpt.get('state_dict', ckpt)) if isinstance(ckpt, dict) else ckpt
-        model.load_state_dict(state, strict=False)
+        model.load_state_dict(state, strict=True)
     except Exception as e:
         print(f"Error loading weights: {e}")
         sys.exit(1)
         
     model.eval()
 
-    # TrackNet input is 3 stacked frames (3 channels each) = 9 channels.
+    # TrackNet input is 9 stacked frames (3 channels each) = 27 channels.
     # Training was done at 640x360.
-    dummy_input = torch.randn(1, 9, 360, 640)
+    dummy_input = torch.randn(1, 27, 360, 640)
     
     print(f"Exporting ONNX graph to {output_path}...")
     torch.onnx.export(
