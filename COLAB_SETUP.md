@@ -28,6 +28,6 @@ os.makedirs('/content/GolfAI/models', exist_ok=True)
 # 4. Install dependencies
 !pip install -q -r /content/GolfAI/requirements.txt
 
-# 5. Run the tracking pipeline using PyTorch model
-!python /content/GolfAI/main.py --video "/content/GolfAI/orange_right_1.mp4" --detector tracknet-only
+# 5. Run the tracking pipeline using the PyTorch model with color identification enabled
+!python /content/GolfAI/main.py --video "/content/GolfAI/orange_right_1.mp4" --detector tracknet
 ```
