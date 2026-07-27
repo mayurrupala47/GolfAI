@@ -107,12 +107,26 @@ class TrackNetEngine:
         return rgb.astype(np.float32) / 255.0
 
     def extract_peak(self, heatmap, orig_w, orig_h):
-        """Find the peak coordinate in the heatmap above threshold."""
+        """Find the peak coordinate in the heatmap above threshold with compactness filtering."""
         idx = np.argmax(heatmap)
         hy, hx = np.unravel_index(idx, heatmap.shape)
         conf = float(heatmap[hy, hx])
         
         if conf < self.conf_threshold:
+            return None, conf
+            
+        # Compactness filter: golf balls have sharp peaks, shirts/shoes have large diffuse blobs
+        y_min = max(0, hy - 7)
+        y_max = min(self.infer_h, hy + 8)
+        x_min = max(0, hx - 7)
+        x_max = min(self.infer_w, hx + 8)
+        
+        local_window = heatmap[y_min:y_max, x_min:x_max]
+        active_pixels = np.sum(local_window > (conf * 0.5))
+        
+        # If the activation is too large/diffuse (e.g. > 45 pixels active),
+        # it is a large object (shirt/shoe/clutter) rather than a tiny golf ball.
+        if active_pixels > 45:
             return None, conf
             
         cx = hx / self.infer_w * orig_w
