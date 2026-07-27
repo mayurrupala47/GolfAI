@@ -66,21 +66,32 @@ class TrackNetEngine:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print(f"[TrackNetEngine] Initializing on {self.device}...")
         
-        self.model = TrackNetV3().to(self.device)
-        try:
-            ckpt = torch.load(weights_path, map_location=self.device, weights_only=False)
-            state = ckpt.get('model', ckpt.get('state_dict', ckpt)) if isinstance(ckpt, dict) else ckpt
-            self.model.load_state_dict(state, strict=True)
-            print(f"[TrackNetEngine] Successfully loaded weights strictly from {weights_path}")
-        except Exception as e:
-            print(f"[TrackNetEngine] ERROR loading weights: {e}")
-            
-        self.model.eval()
-        self.conf_threshold = conf_threshold
-        
         self.infer_w = 640
         self.infer_h = 360
         self.frame_buffer = []
+        self.conf_threshold = conf_threshold
+        
+        # Determine if loading ONNX or PyTorch weights
+        self.is_onnx = weights_path.endswith('.onnx')
+        
+        if self.is_onnx:
+            import onnxruntime as ort
+            print(f"[TrackNetEngine] Loading ONNX model from {weights_path}...")
+            # Use CUDA provider if GPU is active
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if self.device == 'cuda' else ['CPUExecutionProvider']
+            self.session = ort.InferenceSession(weights_path, providers=providers)
+            self.input_name = self.session.get_inputs()[0].name
+            self.output_name = self.session.get_outputs()[0].name
+        else:
+            self.model = TrackNetV3().to(self.device)
+            try:
+                ckpt = torch.load(weights_path, map_location=self.device, weights_only=False)
+                state = ckpt.get('model', ckpt.get('state_dict', ckpt)) if isinstance(ckpt, dict) else ckpt
+                self.model.load_state_dict(state, strict=True)
+                print(f"[TrackNetEngine] Successfully loaded weights strictly from {weights_path}")
+            except Exception as e:
+                print(f"[TrackNetEngine] ERROR loading weights: {e}")
+            self.model.eval()
 
     def preprocess(self, frame):
         """Resize and normalize frame"""
@@ -119,11 +130,17 @@ class TrackNetEngine:
         # Stack 9 frames (HxWx27)
         stacked = np.concatenate(self.frame_buffer, axis=2)
         
-        # To PyTorch tensor (1x27xHxW)
-        tensor = torch.from_numpy(stacked).permute(2,0,1).unsqueeze(0).float().to(self.device)
-        
-        with torch.no_grad():
-            heatmaps = self.model(tensor).squeeze(0).cpu().numpy()
+        if self.is_onnx:
+            # ONNX Runtime Inference
+            tensor = np.transpose(stacked, (2, 0, 1))
+            tensor = np.expand_dims(tensor, axis=0).astype(np.float32)
+            outputs = self.session.run([self.output_name], {self.input_name: tensor})
+            heatmaps = outputs[0][0] # shape (8, 360, 640)
+        else:
+            # PyTorch Inference
+            tensor = torch.from_numpy(stacked).permute(2,0,1).unsqueeze(0).float().to(self.device)
+            with torch.no_grad():
+                heatmaps = self.model(tensor).squeeze(0).cpu().numpy()
             
         # Predict using the last predicted heatmap (corresponding to the current frame)
         pos, conf = self.extract_peak(heatmaps[-1], orig_w, orig_h)
