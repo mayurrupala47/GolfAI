@@ -23,16 +23,11 @@ if not os.path.exists('/content/GolfAI'):
 os.makedirs('/content/GolfAI/models', exist_ok=True)
 # NOTE: Update the source paths below if your models or videos are in different Drive folders
 !cp "/content/drive/MyDrive/Golf AI/models/TrackNet_best.pt" "/content/GolfAI/models/TrackNet_best.pt"
-!cp "/content/drive/MyDrive/Golf AI/models/TrackNet_best.onnx" "/content/GolfAI/models/TrackNet_best.onnx"
-!cp "/content/drive/MyDrive/Golf AI/models/TrackNet_best.onnx.data" "/content/GolfAI/models/TrackNet_best.onnx.data"
 !cp "/content/drive/MyDrive/Golf AI/Golf All color videos/orange_right_1.mp4" "/content/GolfAI/orange_right_1.mp4"
 
-# 4. Install dependencies (including ONNX GPU runtime matching Colab's CUDA 12)
+# 4. Install dependencies
 !pip install -q -r /content/GolfAI/requirements.txt
-!pip install -q onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
-!pip install -q onnxscript onnx
 
-# 5. Run the tracking pipeline
-# Note: The engine automatically detects and loads the ONNX version of the model since it is present in the models/ folder.
+# 5. Run the tracking pipeline using PyTorch model
 !python /content/GolfAI/main.py --video "/content/GolfAI/orange_right_1.mp4" --detector tracknet-only
 ```
