@@ -84,8 +84,8 @@ class TrackNetEngine:
         if self.is_onnx:
             import onnxruntime as ort
             print(f"[TrackNetEngine] Loading ONNX model from {weights_path}...")
-            # Use CUDA provider if GPU is active
-            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if self.device == 'cuda' else ['CPUExecutionProvider']
+            # Use TensorRT and CUDA providers if GPU is active
+            providers = ['TensorRTExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider'] if self.device == 'cuda' else ['CPUExecutionProvider']
             self.session = ort.InferenceSession(weights_path, providers=providers)
             self.input_name = self.session.get_inputs()[0].name
             self.output_name = self.session.get_outputs()[0].name
