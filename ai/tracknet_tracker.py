@@ -61,6 +61,8 @@ class TrackNetV3(nn.Module):
         
         return torch.sigmoid(self.predictor(u3))
 
+import os
+
 class TrackNetEngine:
     def __init__(self, weights_path='models/TrackNet_best.pt', conf_threshold=0.3):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -71,8 +73,13 @@ class TrackNetEngine:
         self.frame_buffer = []
         self.conf_threshold = conf_threshold
         
-        # Determine if loading ONNX or PyTorch weights
-        self.is_onnx = weights_path.endswith('.onnx')
+        # Auto-detect if ONNX alternative exists
+        onnx_alternative = weights_path.replace('.pt', '.onnx')
+        if os.path.exists(onnx_alternative):
+            weights_path = onnx_alternative
+            self.is_onnx = True
+        else:
+            self.is_onnx = weights_path.endswith('.onnx')
         
         if self.is_onnx:
             import onnxruntime as ort
