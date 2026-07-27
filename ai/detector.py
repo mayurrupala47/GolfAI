@@ -229,8 +229,9 @@ class HybridBallDetector(IBallDetector):
         if is_ignored:
             return []
             
-        # Create a faux bounding box (12x12) around the centroid for color extraction
-        box_size = 6
+        # Dynamically scale color extraction crop size based on frame resolution
+        # (box_size = 6 at 640px width, scaling up proportionally for 1080p or 4K feeds)
+        box_size = max(4, int(6 * (w / 640.0)))
         x1 = max(0, int(cx - box_size))
         y1 = max(0, int(cy - box_size))
         x2 = min(w, int(cx + box_size))
