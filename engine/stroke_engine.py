@@ -81,8 +81,21 @@ class StrokeEngine:
                 if sm and sm.state == BallState.MOVING:
                     hint_moving = True
             
-            # If resting and not on check-frame, skip inference (check every 2nd frame)
-            if all_resting and (frame_idx % 2 != 0):
+            # Check if ball is in the putting zone (near the cup)
+            is_near_cup = False
+            for tid, track in self.tracker.tracks.items():
+                lc = track.get("last_matched_center")
+                sm = self.state_machines.get(tid)
+                if lc is not None and sm:
+                    for item in sm.target_holes:
+                        hx, hy = item[0], item[1]
+                        dist_to_cup = ((lc[0] - hx)**2 + (lc[1] - hy)**2)**0.5
+                        if dist_to_cup < 100.0:
+                            is_near_cup = True
+                            break
+            
+            # If resting and not on check-frame, skip inference (but wake up completely near the cup!)
+            if all_resting and (frame_idx % 2 != 0) and not is_near_cup:
                 skip_inference = True
                 
         if skip_inference:

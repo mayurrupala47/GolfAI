@@ -371,8 +371,14 @@ class BallStateMachine:
                         if not hasattr(self, "stroke_consecutive_frames"):
                             self.stroke_consecutive_frames = 0
                         self.stroke_consecutive_frames += 1
-                        # Require 3 consecutive frames of sustained motion away from rest position to filter putter head/hand shadows
-                        required_frames = 3
+                        # Require fewer frames of sustained motion near the cup (2 frames instead of 3)
+                        # to catch quick tap-ins before they immediately roll in and disappear.
+                        dist_to_cup = 999.0
+                        if len(self.target_holes) > 0:
+                            hx, hy = self.target_holes[0][0], self.target_holes[0][1]
+                            dist_to_cup = ((curr_x - hx)**2 + (curr_y - hy)**2)**0.5
+                        required_frames = 2 if dist_to_cup < 100.0 else 3
+                        
                         if self.stroke_consecutive_frames >= required_frames:
                             # Calculate Confidence Score
                             score = 0.0
