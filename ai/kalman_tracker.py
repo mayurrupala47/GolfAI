@@ -301,10 +301,12 @@ class KalmanBallTracker(IBallTracker):
                     dist_from_anchor = math.sqrt((ecx - anchor[0])**2 + (ecy - anchor[1])**2)
                     det_color = det.get("color", "unknown")
                     
-                    # Color check: if color is locked AND candidate has a known color,
-                    # it MUST match the locked color to be considered for updates or escape.
-                    if locked_color != "unknown" and det_color != "unknown" and det_color != locked_color:
-                        continue  # Reject non-matching color (shoe/putter/turf/shadow)
+                    # Color check: if color is locked, enforce strict matching
+                    if locked_color != "unknown":
+                        if dist_from_anchor > 100.0 and det_color != locked_color:
+                            continue  # An escaping ball MUST match the locked color (reject shirt/shoe/shadow)
+                        elif dist_from_anchor <= 100.0 and det_color != "unknown" and det_color != locked_color:
+                            continue  # Within anchor zone, reject other known colors
  
                     if dist_from_anchor <= 100.0 and dist_from_anchor < best_near_dist:
                         best_near_dist = dist_from_anchor
