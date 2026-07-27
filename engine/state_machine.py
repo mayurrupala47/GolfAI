@@ -257,10 +257,14 @@ class BallStateMachine:
         for item in self.target_holes:
             hx, hy = item[0], item[1]
             h_radius = item[2] if len(item) > 2 else 18.0
+            
+            # If the ball goes missing near the cup, expand the detection zone slightly
+            # to catch the ball as it drops below the cup lip out of sight.
+            effective_radius = (h_radius + 15.0) if disappeared > 1 else h_radius
             dist = ((curr_x - hx)**2 + (curr_y - hy)**2)**0.5
             
             # HOLE_COMPLETE only triggers if ball is inside cup AND either stopped/slowing down (<0.25m/s) or disappeared in cup
-            if dist < h_radius and (current_speed < 0.25 or disappeared > 3):
+            if dist < effective_radius and (current_speed < 0.25 or disappeared > 3):
                 hole_complete = False
                 if not self.holed:
                     self.holed = True

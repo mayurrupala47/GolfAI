@@ -78,6 +78,10 @@ def push_stroke_event(ball_id, stroke_count, event_type="stroke"):
     for q in list(event_queues):
         q.put(event_data)
 
+# Helper function to check if any browser clients are listening
+def is_client_connected():
+    return len(event_queues) > 0
+
 if __name__ == "__main__":
     # Runs the web server locally on port 5001 (allowing you to connect from any device)
     app.run(host="0.0.0.0", port=5001, threaded=True)

@@ -302,11 +302,9 @@ class KalmanBallTracker(IBallTracker):
                     det_color = det.get("color", "unknown")
                     
                     # Color check: if color is locked AND candidate has a known color,
-                    # it MUST match the locked color to be used for Zone 1 (resting update).
-                    # Zone 2 (ball escaped far away) is exempt - it's a new positional hit, not a resting match.
-                    if dist_from_anchor <= 100.0:
-                        if locked_color != "unknown" and det_color != "unknown" and det_color != locked_color:
-                            continue  # Reject non-matching color within anchor zone (shoe/putter/turf)
+                    # it MUST match the locked color to be considered for updates or escape.
+                    if locked_color != "unknown" and det_color != "unknown" and det_color != locked_color:
+                        continue  # Reject non-matching color (shoe/putter/turf/shadow)
 
                     if dist_from_anchor <= 100.0 and dist_from_anchor < best_near_dist:
                         best_near_dist = dist_from_anchor

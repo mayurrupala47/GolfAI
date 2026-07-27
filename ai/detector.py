@@ -229,8 +229,8 @@ class HybridBallDetector(IBallDetector):
         if is_ignored:
             return []
             
-        # Create a faux bounding box (32x32) around the centroid for color extraction
-        box_size = 16
+        # Create a faux bounding box (12x12) around the centroid for color extraction
+        box_size = 6
         x1 = max(0, int(cx - box_size))
         y1 = max(0, int(cy - box_size))
         x2 = min(w, int(cx + box_size))

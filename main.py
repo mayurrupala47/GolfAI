@@ -799,14 +799,12 @@ def main():
                 push_stroke_event(track_id, stroke_count, event_type)
                 logger.info(f"[Event] {event_type.upper()} | ball={track_id} | count={stroke_count}")
 
-            # Draw visualizer overlay
-            annotated_frame = visualizer.draw(proc_frame, active_metrics)
-            
-
-            
-            # Encode frame as JPEG and push to web dashboard
-            _, jpeg = cv2.imencode('.jpg', annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
-            push_frame(jpeg.tobytes())
+            # Draw visualizer overlay and encode to JPEG only if a web client is connected
+            from app import is_client_connected
+            if is_client_connected():
+                annotated_frame = visualizer.draw(proc_frame, active_metrics)
+                _, jpeg = cv2.imencode('.jpg', annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+                push_frame(jpeg.tobytes())
 
             frame_idx += 1
                 
