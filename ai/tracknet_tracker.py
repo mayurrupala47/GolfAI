@@ -99,12 +99,14 @@ class TrackNetEngine:
             except Exception as e:
                 print(f"[TrackNetEngine] ERROR loading weights: {e}")
             self.model.eval()
+            if self.device == 'cuda':
+                self.model = self.model.half()
 
     def preprocess(self, frame):
-        """Resize and normalize frame"""
+        """Resize and convert to RGB (uint8)"""
         resized = cv2.resize(frame, (self.infer_w, self.infer_h))
         rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
-        return rgb.astype(np.float32) / 255.0
+        return rgb
 
     def extract_peak(self, heatmap, orig_w, orig_h):
         """Find the peak coordinate in the heatmap above threshold with compactness filtering."""
@@ -152,16 +154,23 @@ class TrackNetEngine:
         stacked = np.concatenate(self.frame_buffer, axis=2)
         
         if self.is_onnx:
-            # ONNX Runtime Inference
+            # ONNX Runtime Inference (keep float32)
             tensor = np.transpose(stacked, (2, 0, 1))
-            tensor = np.expand_dims(tensor, axis=0).astype(np.float32)
+            tensor = np.expand_dims(tensor, axis=0).astype(np.float32) / 255.0
             outputs = self.session.run([self.output_name], {self.input_name: tensor})
             heatmaps = outputs[0][0] # shape (8, 360, 640)
         else:
             # PyTorch Inference
-            tensor = torch.from_numpy(stacked).permute(2,0,1).unsqueeze(0).float().to(self.device)
+            # 1. Convert uint8 numpy stacked frames to torch tensor and transfer to GPU
+            tensor = torch.from_numpy(stacked).permute(2,0,1).unsqueeze(0).to(self.device)
+            # 2. Normalize and cast to FP16 (half precision) on GPU!
+            if self.device == 'cuda':
+                tensor = tensor.half() / 255.0
+            else:
+                tensor = tensor.float() / 255.0
+                
             with torch.no_grad():
-                heatmaps = self.model(tensor).squeeze(0).cpu().numpy()
+                heatmaps = self.model(tensor).squeeze(0).float().cpu().numpy()
             
         # Predict using the last predicted heatmap (corresponding to the current frame)
         pos, conf = self.extract_peak(heatmaps[-1], orig_w, orig_h)
