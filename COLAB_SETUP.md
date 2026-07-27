@@ -27,9 +27,10 @@ os.makedirs('/content/GolfAI/models', exist_ok=True)
 !cp "/content/drive/MyDrive/Golf AI/models/TrackNet_best.onnx.data" "/content/GolfAI/models/TrackNet_best.onnx.data"
 !cp "/content/drive/MyDrive/Golf AI/Golf All color videos/orange_right_1.mp4" "/content/GolfAI/orange_right_1.mp4"
 
-# 4. Install dependencies (including ONNX GPU runtime)
+# 4. Install dependencies (including ONNX GPU runtime matching Colab's CUDA 12)
 !pip install -q -r /content/GolfAI/requirements.txt
-!pip install -q onnxruntime-gpu onnxscript onnx
+!pip install -q onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
+!pip install -q onnxscript onnx
 
 # 5. Run the tracking pipeline
 # Note: The engine automatically detects and loads the ONNX version of the model since it is present in the models/ folder.
