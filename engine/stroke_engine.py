@@ -62,22 +62,38 @@ class StrokeEngine:
             1. A list of active ball metrics.
             2. A dictionary of active ball states mapping track_id -> BallState.
         """
-        # 1. Object Detection — pass last known ball position as a hint so the
-        #    OpenCVBallDetector can crop to a small ROI instead of scanning the full frame.
-        #    This processes EVERY frame (no frame skip) so gentle strokes are never missed.
+        # 1. Object Detection — pass last known ball position as a hint.
+        #    Optimize: If the ball is resting (STOPPED/READY), run TrackNet GPU inference only once
+        #    every 5 frames to save CPU/GPU cycles. For other frames, inject a synthetic resting detection.
         hint_center = None
         hint_moving = False
-        if hasattr(self.tracker, "tracks"):
+        skip_inference = False
+        
+        if hasattr(self.tracker, "tracks") and len(self.tracker.tracks) > 0:
+            all_resting = True
             for tid, track in self.tracker.tracks.items():
                 lc = track.get("last_matched_center")
                 if lc is not None:
                     hint_center = lc
-                    # Mark as 'moving' if the track's state machine is in MOVING state
-                    sm = self.state_machines.get(tid)
-                    if sm and sm.state == BallState.MOVING:
-                        hint_moving = True
-                    break  # We only track one ball (Ball ID 1)
-        detections = self.detector.detect(frame, hint_center=hint_center, hint_moving=hint_moving)
+                sm = self.state_machines.get(tid)
+                if sm and sm.state not in [BallState.UNKNOWN, BallState.STOPPED, BallState.READY]:
+                    all_resting = False
+                if sm and sm.state == BallState.MOVING:
+                    hint_moving = True
+            
+            # If resting and not on check-frame, skip inference
+            if all_resting and (frame_idx % 5 != 0):
+                skip_inference = True
+                
+        if skip_inference:
+            detections = []
+            for tid, track in self.tracker.tracks.items():
+                lc = track.get("last_matched_center")
+                if lc is not None:
+                    r = 6.0
+                    detections.append((lc[0] - r, lc[1] - r, lc[0] + r, lc[1] + r, 0.99, track.get("color", "unknown")))
+        else:
+            detections = self.detector.detect(frame, hint_center=hint_center, hint_moving=hint_moving)
         
         # 2. Multi-Object Tracking
         track_states = {tid: sm.state.value for tid, sm in self.state_machines.items()}
