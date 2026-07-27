@@ -73,13 +73,7 @@ class TrackNetEngine:
         self.frame_buffer = []
         self.conf_threshold = conf_threshold
         
-        # Auto-detect if ONNX alternative exists
-        onnx_alternative = weights_path.replace('.pt', '.onnx')
-        if os.path.exists(onnx_alternative):
-            weights_path = onnx_alternative
-            self.is_onnx = True
-        else:
-            self.is_onnx = weights_path.endswith('.onnx')
+        self.is_onnx = weights_path.endswith('.onnx')
         
         if self.is_onnx:
             import onnxruntime as ort
