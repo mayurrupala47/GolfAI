@@ -357,7 +357,8 @@ class BallStateMachine:
                         self.max_impact_accel = max(getattr(self, "max_impact_accel", 0.0), current_accel)
                 
                 # Stroke detection: was in READY/STOPPED, exceeded stroke speed, traveled minimum distance, and acceleration matches
-                if self.placed_on_tee and self.has_exceeded_stroke_speed and self.distance_traveled_since_ready >= self.minimum_distance:
+                required_dist = 0.20 if (self.placed_on_tee and self.stroke_count == 0) else self.minimum_distance
+                if self.placed_on_tee and self.has_exceeded_stroke_speed and self.distance_traveled_since_ready >= required_dist:
                     if current_accel >= self.accel_threshold or getattr(self, "max_impact_accel", 0.0) >= self.accel_threshold:
                         if not hasattr(self, "stroke_consecutive_frames"):
                             self.stroke_consecutive_frames = 0
