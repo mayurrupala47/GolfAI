@@ -19,6 +19,28 @@ class Visualizer:
             BallState.READY: (0, 215, 255),      # Gold / Warm Yellow
             BallState.MOVING: (50, 205, 50)      # Vivid Lime Green
         }
+        
+        # Load calibration regions for drawing
+        self.base_res = [3840, 2160]
+        self.tee_region = None
+        self.cup_regions = []
+        
+        import os
+        import json
+        calibration_path = "config/calibration.json"
+        if os.path.exists(calibration_path):
+            try:
+                with open(calibration_path, "r") as f:
+                    cal = json.load(f)
+                self.base_res = cal.get("source_resolution", [3840, 2160])
+                for region in cal.get("ignore_regions", []):
+                    name = region.get("name", "").lower()
+                    if "tee" in name:
+                        self.tee_region = region
+                    elif "hole" in name or "cup" in name:
+                        self.cup_regions.append(region)
+            except Exception as e:
+                print(f"[Visualizer] Error loading calibration: {e}")
 
     def draw(self, frame: np.ndarray, active_metrics: List[Dict[str, Any]]) -> np.ndarray:
         """
@@ -216,16 +238,26 @@ class Visualizer:
                 )
 
         # 6. Draw Tee and Cup overlay reference markers on the field
-        # Tee 1 marker
-        tee_x, tee_y = 571, 233
-        cv2.circle(annotated_frame, (tee_x, tee_y), 25, (0, 215, 255), 2, cv2.LINE_AA)  # Precise Tee circle
-        cv2.circle(annotated_frame, (tee_x, tee_y), 4, (0, 215, 255), -1, cv2.LINE_AA)   # Tee center dot
-        cv2.putText(annotated_frame, "TEE (571, 233)", (tee_x - 35, tee_y - 30), font, 0.35, (0, 215, 255), 1, cv2.LINE_AA)
-
-        # Cup 1 marker
-        cup_x, cup_y = 88, 264
-        cv2.circle(annotated_frame, (cup_x, cup_y), 18, (255, 0, 255), 2, cv2.LINE_AA)  # Precise Cup circle
-        cv2.circle(annotated_frame, (cup_x, cup_y), 3, (255, 0, 255), -1, cv2.LINE_AA)   # Cup center point
-        cv2.putText(annotated_frame, "CUP (88, 264)", (cup_x - 30, cup_y - 23), font, 0.35, (255, 0, 255), 1, cv2.LINE_AA)
+        # Calculate dynamic scaling based on current frame resolution
+        scale_x = w / self.base_res[0]
+        scale_y = h / self.base_res[1]
+        
+        # Draw Tee 1 marker if loaded
+        if self.tee_region is not None:
+            tee_x = int(self.tee_region["x"] * scale_x)
+            tee_y = int(self.tee_region["y"] * scale_y)
+            tee_r = int(self.tee_region.get("radius", 25.0) * scale_x)
+            cv2.circle(annotated_frame, (tee_x, tee_y), tee_r, (0, 215, 255), 2, cv2.LINE_AA)  # Precise Tee circle
+            cv2.circle(annotated_frame, (tee_x, tee_y), 2, (0, 215, 255), -1, cv2.LINE_AA)   # Tee center dot
+            cv2.putText(annotated_frame, f"TEE ({tee_x}, {tee_y})", (tee_x - 35, tee_y - tee_r - 5), font, 0.3, (0, 215, 255), 1, cv2.LINE_AA)
+            
+        # Draw Cup/Hole markers if loaded
+        for region in self.cup_regions:
+            cup_x = int(region["x"] * scale_x)
+            cup_y = int(region["y"] * scale_y)
+            cup_r = int(region.get("radius", 18.0) * scale_x)
+            cv2.circle(annotated_frame, (cup_x, cup_y), cup_r, (255, 0, 255), 2, cv2.LINE_AA)  # Precise Cup circle
+            cv2.circle(annotated_frame, (cup_x, cup_y), 2, (255, 0, 255), -1, cv2.LINE_AA)   # Cup center point
+            cv2.putText(annotated_frame, f"CUP ({cup_x}, {cup_y})", (cup_x - 30, cup_y - cup_r - 5), font, 0.3, (255, 0, 255), 1, cv2.LINE_AA)
 
         return annotated_frame
