@@ -95,15 +95,15 @@ class BallStateMachine:
                     if "hole" in name or "cup" in name:
                         rx = region["x"]
                         ry = region["y"]
-                        # Strict cup radius (exact cup center only, prevents edge triggers)
-                        h_r = max(14.0, cal_r * 1.2)
+                        # Use exact calibrated cup radius scaled to processing resolution
+                        h_r = cal_r
                         self.target_holes.append((rx * scale_x, ry * scale_y, h_r))
                     elif "tee" in name:
                         rx = region["x"]
                         ry = region["y"]
                         self.tee_point_scaled = (rx * scale_x, ry * scale_y)
-                        # Exact Tee radius (25px) centered on ground truth Tee dot
-                        self.tee_reset_radius = 25.0
+                        # Use exact calibrated Tee radius scaled to processing resolution
+                        self.tee_reset_radius = cal_r
                         
                 logger.info(f"[Ball {self.track_id}] Loaded target holes/cups (strict): {self.target_holes}")
                 if self.tee_point_scaled:
@@ -266,9 +266,7 @@ class BallStateMachine:
             hx, hy = item[0], item[1]
             h_radius = item[2] if len(item) > 2 else 18.0
             
-            # If the ball goes missing near the cup, expand the detection zone slightly
-            # to catch the ball as it drops below the cup lip out of sight.
-            effective_radius = (h_radius + 15.0) if disappeared > 1 else h_radius
+            effective_radius = h_radius
             dist = ((eval_x - hx)**2 + (eval_y - hy)**2)**0.5
             
             # HOLE_COMPLETE only triggers if ball is inside cup AND either stopped/slowing down (<0.25m/s) or disappeared in cup
