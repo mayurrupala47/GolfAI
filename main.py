@@ -703,7 +703,7 @@ def main():
     )
 
     # 6. Initialize Visualizer Overlay
-    visualizer = Visualizer(motion_analyzer=motion_analyzer)
+    visualizer = Visualizer(motion_analyzer=motion_analyzer, config=config)
 
     # 7. Ensure output image directories exist and are cleared of previous data
     frames_dir = "outputs/frames"

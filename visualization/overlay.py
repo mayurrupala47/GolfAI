@@ -9,7 +9,7 @@ class Visualizer:
     Renders annotations, HUD metrics, state indicators, and motion trajectories 
     on video frames using OpenCV.
     """
-    def __init__(self, motion_analyzer: MotionAnalyzer):
+    def __init__(self, motion_analyzer: MotionAnalyzer, config: Dict[str, Any] = None):
         self.motion_analyzer = motion_analyzer
         
         # Color mapping (BGR)
@@ -24,7 +24,12 @@ class Visualizer:
         self.base_res = [3840, 2160]
         self.tee_region = None
         self.cup_regions = []
+        self.mirror_x = False
         
+        video_input = config.get("video", {}).get("input", "") if config else ""
+        if "left" in os.path.basename(video_input).lower():
+            self.mirror_x = True
+            
         import os
         import json
         calibration_path = "config/calibration.json"
@@ -244,7 +249,10 @@ class Visualizer:
         
         # Draw Tee 1 marker if loaded
         if self.tee_region is not None:
-            tee_x = int(self.tee_region["x"] * scale_x)
+            raw_x = self.tee_region["x"]
+            if self.mirror_x:
+                raw_x = self.base_res[0] - raw_x
+            tee_x = int(raw_x * scale_x)
             tee_y = int(self.tee_region["y"] * scale_y)
             tee_r = int(self.tee_region.get("radius", 25.0) * scale_x)
             cv2.circle(annotated_frame, (tee_x, tee_y), tee_r, (0, 215, 255), 2, cv2.LINE_AA)  # Precise Tee circle
@@ -253,7 +261,10 @@ class Visualizer:
             
         # Draw Cup/Hole markers if loaded
         for region in self.cup_regions:
-            cup_x = int(region["x"] * scale_x)
+            raw_x = region["x"]
+            if self.mirror_x:
+                raw_x = self.base_res[0] - raw_x
+            cup_x = int(raw_x * scale_x)
             cup_y = int(region["y"] * scale_y)
             cup_r = int(region.get("radius", 18.0) * scale_x)
             cv2.circle(annotated_frame, (cup_x, cup_y), cup_r, (255, 0, 255), 2, cv2.LINE_AA)  # Precise Cup circle

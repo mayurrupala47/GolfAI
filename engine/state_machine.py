@@ -89,17 +89,27 @@ class BallStateMachine:
                 scale_x = resize_width / base_res[0]
                 scale_y = (resize_width * (base_res[1] / base_res[0])) / base_res[1]
                 
+                # Auto-detect left layout to mirror X coordinates
+                video_input = config.get("video", {}).get("input", "")
+                mirror_x = "left" in os.path.basename(video_input).lower()
+                if mirror_x:
+                    logger.info(f"[Ball {self.track_id}] Flipped left camera layout detected. Mirroring calibration coordinates.")
+                
                 for region in cal.get("ignore_regions", []):
                     name = region.get("name", "").lower()
                     cal_r = float(region.get("radius", 10.0)) * scale_x
+                    
+                    # Mirror raw X coordinate relative to source resolution width (base_res[0])
+                    rx = region["x"]
+                    if mirror_x:
+                        rx = base_res[0] - rx
+                        
                     if "hole" in name or "cup" in name:
-                        rx = region["x"]
                         ry = region["y"]
                         # Use exact calibrated cup radius scaled to processing resolution
                         h_r = cal_r
                         self.target_holes.append((rx * scale_x, ry * scale_y, h_r))
                     elif "tee" in name:
-                        rx = region["x"]
                         ry = region["y"]
                         self.tee_point_scaled = (rx * scale_x, ry * scale_y)
                         # Use exact calibrated Tee radius scaled to processing resolution

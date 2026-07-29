@@ -36,12 +36,15 @@ def classify_ball_color(crop_bgr: np.ndarray) -> str:
     if np.sum(yellow_pixels_mask) / h.size > 0.15:
         return "yellow"
         
+    # Check if this is genuinely a green ball (fluorescent green ball with high saturation non-turf pixels)
+    # Checked first to prevent green turf filtering from deleting green ball pixels
+    green_pixels_mask = (h >= 38) & (h < 85) & (s > 90) & (v > 90)
+    green_fraction = np.sum(green_pixels_mask) / h.size if h.size > 0 else 0.0
+    if green_fraction > 0.15:
+        return "green"
+        
     # Filter out green background turf pixels (Hue between 35 and 85)
     non_green_mask = (h < 35) | (h > 85)
-    
-    # Check if this is genuinely a green ball (fluorescent green ball with high saturation non-turf pixels)
-    green_pixels_mask = (h >= 38) & (h < 85) & (s > 130) & (v > 130)
-    green_fraction = np.sum(green_pixels_mask) / h.size if h.size > 0 else 0.0
     
     # If non-green pixels exist, prioritize non-green pixels (red/orange/yellow/white ball on green turf)
     if np.sum(non_green_mask) > 0.15 * h.size:
@@ -49,9 +52,6 @@ def classify_ball_color(crop_bgr: np.ndarray) -> str:
         valid_s = s[non_green_mask]
         valid_v = v[non_green_mask]
     else:
-        # Genuine green ball on green turf
-        if green_fraction > 0.40:
-            return "green"
         valid_h, valid_s, valid_v = h.flatten(), s.flatten(), v.flatten()
         
     avg_s = np.mean(valid_s)
