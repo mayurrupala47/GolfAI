@@ -514,8 +514,9 @@ def main():
     
     # 3. Instantiate concrete implementations based on interfaces (Dependency Injection)
     detector_type = args.detector
-    # Determine confidence threshold for TrackNet (default 0.70, or read from config)
-    tracknet_conf = config.get("yolo_detector", {}).get("confidence_threshold", 0.70)
+    # Use a solid 0.30 confidence threshold for TrackNet to capture motion-blurred balls.
+    # The active color-locking filters will reject any shoe/turf false positives.
+    tracknet_conf = 0.30
     
     if detector_type == "tracknet":
         logger.info(f"Configuring Hybrid TrackNet + HSV Color Detector (Conf Threshold: {tracknet_conf})...")
