@@ -497,6 +497,9 @@ def main():
             logger.warning(f"Failed to resolve Google Colab proxy URL: {e}")
 
     # 2. Extract configuration fields
+    video_input_path = args.video
+    video_output_path = "outputs/output.mp4"
+    
     # Ensure config video section is updated with overridden video path
     if "video" not in config:
         config["video"] = {}
