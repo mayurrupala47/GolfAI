@@ -497,9 +497,11 @@ def main():
             logger.warning(f"Failed to resolve Google Colab proxy URL: {e}")
 
     # 2. Extract configuration fields
-    video_input_path = args.video
-    video_output_path = "outputs/output.mp4"
-    
+    # Ensure config video section is updated with overridden video path
+    if "video" not in config:
+        config["video"] = {}
+    config["video"]["input"] = video_input_path
+
     # Ensure correct folders exist
     os.makedirs(os.path.dirname(os.path.abspath(video_output_path)), exist_ok=True)
     
@@ -509,12 +511,15 @@ def main():
     
     # 3. Instantiate concrete implementations based on interfaces (Dependency Injection)
     detector_type = args.detector
+    # Determine confidence threshold for TrackNet (default 0.70, or read from config)
+    tracknet_conf = config.get("yolo_detector", {}).get("confidence_threshold", 0.70)
+    
     if detector_type == "tracknet":
-        logger.info("Configuring Hybrid TrackNet + HSV Color Detector (NEW PIPELINE)...")
-        detector = HybridBallDetector()
+        logger.info(f"Configuring Hybrid TrackNet + HSV Color Detector (Conf Threshold: {tracknet_conf})...")
+        detector = HybridBallDetector(conf_threshold=tracknet_conf)
     elif detector_type == "tracknet-only":
-        logger.info("Configuring Pure TrackNet Detector (No color processing)...")
-        detector = TrackNetOnlyDetector()
+        logger.info(f"Configuring Pure TrackNet Detector (Conf Threshold: {tracknet_conf})...")
+        detector = TrackNetOnlyDetector(conf_threshold=tracknet_conf)
     elif detector_type == "yolo-hybrid":
         logger.info("Configuring Option A: Custom YOLO Lock-on + OpenCV Tracking Detector...")
         detector = CustomYoloOpenCVHybridDetector(config)

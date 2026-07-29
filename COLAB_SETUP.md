@@ -24,6 +24,7 @@ os.makedirs('/content/GolfAI/models', exist_ok=True)
 # NOTE: Update the source paths below if your models or videos are in different Drive folders
 !cp "/content/drive/MyDrive/Golf AI/models/TrackNet_best.pt" "/content/GolfAI/models/TrackNet_best.pt"
 !cp "/content/drive/MyDrive/Golf AI/Golf All color videos/orange_right_1.mp4" "/content/GolfAI/orange_right_1.mp4"
+!cp "/content/drive/MyDrive/Golf AI/Golf All color videos/white__left.mp4" "/content/GolfAI/white__left.mp4"
 
 # 4. Install dependencies
 !pip install -q -r /content/GolfAI/requirements.txt
