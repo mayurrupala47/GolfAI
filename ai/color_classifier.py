@@ -21,18 +21,18 @@ def classify_ball_color(crop_bgr: np.ndarray) -> str:
     h, s, v = cv2.split(hsv)
     
     # Check for Orange pixels explicitly (Hue 5-28 with decent saturation/value)
-    orange_pixels_mask = (h >= 5) & (h < 28) & (s > 70) & (v > 70)
+    orange_pixels_mask = (h >= 5) & (h < 28) & (s > 45) & (v > 45)
     orange_fraction = np.sum(orange_pixels_mask) / h.size if h.size > 0 else 0.0
     if orange_fraction > 0.12:
         return "orange"
         
     # Check for Red pixels explicitly (Hue < 5 or > 165)
-    red_pixels_mask = ((h < 5) | (h > 165)) & (s > 70) & (v > 70)
+    red_pixels_mask = ((h < 5) | (h > 165)) & (s > 45) & (v > 45)
     if np.sum(red_pixels_mask) / h.size > 0.15:
         return "red"
         
     # Check for Yellow pixels explicitly (Hue 28-38)
-    yellow_pixels_mask = (h >= 28) & (h < 38) & (s > 70) & (v > 70)
+    yellow_pixels_mask = (h >= 28) & (h < 38) & (s > 45) & (v > 45)
     if np.sum(yellow_pixels_mask) / h.size > 0.15:
         return "yellow"
         
@@ -64,7 +64,7 @@ def classify_ball_color(crop_bgr: np.ndarray) -> str:
         avg_h += 180
     
     # White classification: low saturation and high brightness
-    if avg_s < 55 and avg_v > 120:
+    if avg_s < 95 and avg_v > 90:
         return "white"
         
     # Classification based on Hue per AGENTS.md Rule 5:
