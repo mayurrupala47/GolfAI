@@ -520,10 +520,10 @@ def main():
     
     if detector_type == "tracknet":
         logger.info(f"Configuring Hybrid TrackNet + HSV Color Detector (Conf Threshold: {tracknet_conf})...")
-        detector = HybridBallDetector(conf_threshold=tracknet_conf)
+        detector = HybridBallDetector(conf_threshold=tracknet_conf, video_path=video_input_path)
     elif detector_type == "tracknet-only":
         logger.info(f"Configuring Pure TrackNet Detector (Conf Threshold: {tracknet_conf})...")
-        detector = TrackNetOnlyDetector(conf_threshold=tracknet_conf)
+        detector = TrackNetOnlyDetector(conf_threshold=tracknet_conf, video_path=video_input_path)
     elif detector_type == "yolo-hybrid":
         logger.info("Configuring Option A: Custom YOLO Lock-on + OpenCV Tracking Detector...")
         detector = CustomYoloOpenCVHybridDetector(config)

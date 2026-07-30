@@ -163,9 +163,9 @@ class HybridBallDetector(IBallDetector):
     Uses TrackNetV2 for sub-pixel, motion-blur resilient positional tracking.
     Uses HSV Heuristics (classify_ball_color) on a tiny cropped ROI for color identification.
     """
-    def __init__(self, tracknet_weights: str = "models/TrackNet_best.pt", conf_threshold: float = 0.1):
+    def __init__(self, tracknet_weights: str = "models/TrackNet_best.pt", conf_threshold: float = 0.1, video_path: str = None):
         from ai.tracknet_tracker import TrackNetEngine
-        self.engine = TrackNetEngine(weights_path=tracknet_weights, conf_threshold=conf_threshold)
+        self.engine = TrackNetEngine(weights_path=tracknet_weights, conf_threshold=conf_threshold, video_path=video_path)
         
         self.calibration_path = "config/calibration.json"
         self.ignore_regions = []
@@ -249,9 +249,9 @@ class TrackNetOnlyDetector(IBallDetector):
     Uses TrackNetV2 for positional tracking, skips color classification entirely
     to maximize FPS (returns 'UNKNOWN' for color).
     """
-    def __init__(self, tracknet_weights: str = "models/TrackNet_best.pt", conf_threshold: float = 0.1):
+    def __init__(self, tracknet_weights: str = "models/TrackNet_best.pt", conf_threshold: float = 0.1, video_path: str = None):
         from ai.tracknet_tracker import TrackNetEngine
-        self.engine = TrackNetEngine(weights_path=tracknet_weights, conf_threshold=conf_threshold)
+        self.engine = TrackNetEngine(weights_path=tracknet_weights, conf_threshold=conf_threshold, video_path=video_path)
         
         self.calibration_path = "config/calibration.json"
         self.ignore_regions = []

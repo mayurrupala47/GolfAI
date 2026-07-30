@@ -64,7 +64,7 @@ class TrackNetV3(nn.Module):
 import os
 
 class TrackNetEngine:
-    def __init__(self, weights_path='models/TrackNet_best.pt', conf_threshold=0.3):
+    def __init__(self, weights_path='models/TrackNet_best.pt', conf_threshold=0.3, video_path=None):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print(f"[TrackNetEngine] Initializing on {self.device}...")
         
@@ -73,10 +73,17 @@ class TrackNetEngine:
         self.frame_buffer = []
         self.conf_threshold = conf_threshold
         
-        # Warmup buffer to dynamically compute the static course background
+        # Warmup buffer to dynamically compute background (for live camera fallbacks)
         self.warmup_frames = []
         self.median_background = None
         self.warmup_limit = 30
+        
+        # Pre-compute high-quality background for local video files
+        if video_path and isinstance(video_path, str) and os.path.exists(video_path):
+            ext = os.path.splitext(video_path)[1].lower()
+            if ext in ['.mp4', '.avi', '.mov', '.mkv', '.webm']:
+                print(f"[TrackNetEngine] Pre-computing static background from video file: {video_path}...")
+                self.median_background = self._generate_video_median(video_path)
         
         self.is_onnx = weights_path.endswith('.onnx')
         
@@ -112,6 +119,38 @@ class TrackNetEngine:
         resized = cv2.resize(frame, (self.infer_w, self.infer_h))
         rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
         return rgb
+
+    def _generate_video_median(self, video_file):
+        """Precompute the static background image across the entire video file."""
+        cap = cv2.VideoCapture(video_file)
+        if not cap.isOpened():
+            print(f"[TrackNetEngine] WARNING: Could not open video {video_file} for median pre-computation.")
+            return None
+        video_len = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if video_len <= 0:
+            cap.release()
+            return None
+            
+        # Sample up to 100 frames uniformly across the video to average out moving elements
+        num_samples = min(100, video_len)
+        sample_step = max(1, video_len // num_samples)
+        
+        frame_list = []
+        for i in range(0, video_len, sample_step):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, i)
+            success, frame = cap.read()
+            if not success:
+                break
+            prepped = self.preprocess(frame)
+            frame_list.append(prepped)
+        cap.release()
+        
+        if not frame_list:
+            return None
+            
+        median = np.median(frame_list, axis=0).astype(np.uint8)
+        print(f"[TrackNetEngine] Background computed successfully from {len(frame_list)} samples.")
+        return median
 
     def extract_peak(self, heatmap, orig_w, orig_h):
         """Find the peak coordinate in the heatmap above threshold with compactness filtering."""
