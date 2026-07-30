@@ -37,6 +37,7 @@ processing:
   use_roi: true            # Whether to apply playable area ROI mask
   roi_radius: 120          # ROI crop radius (px) around predicted ball center when STOPPED/READY
   roi_moving_radius: 220   # Larger ROI radius when ball is MOVING (faster shots travel further per frame)
+  enable_sleep_mode: true  # Set to false to disable resting frame skipping and run TrackNet on 100% of frames
   # RPi3 tip: do NOT use --frame-skip — it causes gentle/soft strokes to be missed.
   # The ROI-based detector already processes every frame at ~10x less pixel cost.
 

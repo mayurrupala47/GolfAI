@@ -95,7 +95,8 @@ class StrokeEngine:
                             break
             
             # If resting and not on check-frame, skip inference (but wake up completely near the cup!)
-            if all_resting and (frame_idx % 2 != 0) and not is_near_cup:
+            sleep_mode_enabled = self.config.get("processing", {}).get("enable_sleep_mode", True)
+            if sleep_mode_enabled and all_resting and (frame_idx % 2 != 0) and not is_near_cup:
                 skip_inference = True
                 
         if skip_inference:
