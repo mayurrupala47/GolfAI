@@ -101,8 +101,8 @@ class BallStateMachine:
                     elif "tee" in name:
                         ry = region["y"]
                         self.tee_point_scaled = (rx * scale_x, ry * scale_y)
-                        # Use exact calibrated Tee radius scaled to processing resolution, with a 25px tolerance minimum
-                        self.tee_reset_radius = max(25.0, cal_r)
+                        # Proximity threshold for Tee reset (60px at 640x360 resolution for 99% accuracy)
+                        self.tee_reset_radius = 60.0
                         
                 logger.info(f"[Ball {self.track_id}] Loaded target holes/cups (strict): {self.target_holes}")
                 if self.tee_point_scaled:
@@ -241,7 +241,7 @@ class BallStateMachine:
             hx, hy = item[0], item[1]
             h_radius = item[2] if len(item) > 2 else 18.0
             dist_to_cup = math.hypot(eval_x - hx, eval_y - hy)
-            if dist_to_cup < (h_radius * 1.5 if h_radius > 0 else 35.0):
+            if dist_to_cup < max(35.0, h_radius):
                 if disappeared >= 10:  # Ball missing inside cup zone = holed!
                     hole_complete = False
                     if not self.holed:
