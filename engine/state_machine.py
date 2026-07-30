@@ -112,8 +112,8 @@ class BallStateMachine:
                     elif "tee" in name:
                         ry = region["y"]
                         self.tee_point_scaled = (rx * scale_x, ry * scale_y)
-                        # Use exact calibrated Tee radius scaled to processing resolution
-                        self.tee_reset_radius = cal_r
+                        # Use exact calibrated Tee radius scaled to processing resolution, with a 25px tolerance minimum
+                        self.tee_reset_radius = max(25.0, cal_r)
                         
                 logger.info(f"[Ball {self.track_id}] Loaded target holes/cups (strict): {self.target_holes}")
                 if self.tee_point_scaled:
