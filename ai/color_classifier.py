@@ -38,9 +38,9 @@ def classify_ball_color(crop_bgr: np.ndarray) -> str:
         
     # Check if this is genuinely a green ball (fluorescent green ball with high saturation non-turf pixels)
     # Checked first to prevent green turf filtering from deleting green ball pixels
-    green_pixels_mask = (h >= 38) & (h < 85) & (s > 90) & (v > 90)
+    green_pixels_mask = (h >= 38) & (h < 85) & (s > 135) & (v > 130)
     green_fraction = np.sum(green_pixels_mask) / h.size if h.size > 0 else 0.0
-    if green_fraction > 0.15:
+    if green_fraction > 0.20:
         return "green"
         
     # Filter out green background turf pixels (Hue between 35 and 85)
