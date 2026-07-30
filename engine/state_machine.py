@@ -19,7 +19,7 @@ class BallStateMachine:
     """
     def __init__(self, track_id: int, config: Dict[str, Any]):
         self.track_id = track_id
-        self.state = BallState.UNKNOWN
+        self.state = BallState.STOPPED
         self.stroke_count = 0
         self.low_fps = config.get("low_fps", False)
         self.strict_course_mode = config.get("strict_course_mode", False)
