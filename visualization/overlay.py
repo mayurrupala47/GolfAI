@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+import json
 from typing import Dict, Any, List
 from engine.state_machine import BallState
 from ai.motion import MotionAnalyzer
@@ -31,8 +32,6 @@ class Visualizer:
         if "left" in os.path.basename(video_input).lower():
             self.mirror_x = True
             
-        import os
-        import json
         calibration_path = "config/calibration.json"
         if os.path.exists(calibration_path):
             try:
