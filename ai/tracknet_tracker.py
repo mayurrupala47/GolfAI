@@ -166,32 +166,22 @@ class TrackNetEngine:
         print(f"[TrackNetEngine] Background computed successfully from {len(frame_list)} samples.")
         return median
 
-    def extract_peak(self, heatmap, orig_w, orig_h):
-        """Find the peak coordinate in the heatmap above threshold with compactness filtering."""
-        idx = np.argmax(heatmap)
-        hy, hx = np.unravel_index(idx, heatmap.shape)
-        conf = float(heatmap[hy, hx])
-        
-        if conf < self.conf_threshold:
-            return None, conf
-            
-        # Compactness filter: golf balls have sharp peaks, shirts/shoes have large diffuse blobs
-        y_min = max(0, hy - 7)
-        y_max = min(self.infer_h, hy + 8)
-        x_min = max(0, hx - 7)
-        x_max = min(self.infer_w, hx + 8)
-        
-        local_window = heatmap[y_min:y_max, x_min:x_max]
-        active_pixels = np.sum(local_window > (conf * 0.5))
-        
-        # If the activation is too large/diffuse (e.g. > 45 pixels active),
-        # it is a large object (shirt/shoe/clutter) rather than a tiny golf ball.
-        if active_pixels > 45:
-            return None, conf
-            
-        cx = hx / self.infer_w * orig_w
-        cy = hy / self.infer_h * orig_h
-        return (cx, cy), conf
+    def _predict_location(self, heatmap):
+        """Get coordinates from the binary heatmap (matching reference test.py)."""
+        if np.amax(heatmap) == 0:
+            return 0, 0, 0, 0
+        (cnts, _) = cv2.findContours(heatmap.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not cnts:
+            return 0, 0, 0, 0
+        rects = [cv2.boundingRect(ctr) for ctr in cnts]
+        max_area_idx = 0
+        max_area = rects[0][2] * rects[0][3]
+        for i in range(1, len(rects)):
+            area = rects[i][2] * rects[i][3]
+            if area > max_area:
+                max_area_idx = i
+                max_area = area
+        return rects[max_area_idx]
 
     def update(self, frame):
         """
@@ -242,5 +232,17 @@ class TrackNetEngine:
                 heatmaps = self.model(tensor).squeeze(0).float().cpu().numpy()
             
         # Predict using the last predicted heatmap (corresponding to the current frame)
-        pos, conf = self.extract_peak(heatmaps[-1], orig_w, orig_h)
+        # Threshold strictly at 0.5 to match reference script decoding
+        heatmap_thresh = (heatmaps[-1] > 0.5).astype(np.uint8) * 255
+        hx, hy, hw, hh = self._predict_location(heatmap_thresh)
+        
+        if hw > 0 and hh > 0:
+            cx = (hx + hw / 2.0) / self.infer_w * orig_w
+            cy = (hy + hh / 2.0) / self.infer_h * orig_h
+            pos = (cx, cy)
+            conf = float(np.max(heatmaps[-1]))
+        else:
+            pos = None
+            conf = 0.0
+            
         return pos, conf
