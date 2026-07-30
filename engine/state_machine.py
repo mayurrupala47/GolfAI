@@ -85,6 +85,8 @@ class BallStateMachine:
                     logger.info(f"[Ball {self.track_id}] Flipped left camera layout detected. Mirroring calibration coordinates.")
                 
                 for region in cal.get("ignore_regions", []):
+                    if "x" not in region or "y" not in region:
+                        continue  # Skip polygon ignore regions
                     name = region.get("name", "").lower()
                     cal_r = float(region.get("radius", 10.0)) * scale_x
                     
