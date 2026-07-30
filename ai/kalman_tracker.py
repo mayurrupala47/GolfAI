@@ -198,7 +198,7 @@ class KalmanBallTracker(IBallTracker):
                 if state in ["STOPPED", "READY"] and locked_color != "unknown" and det_color != locked_color and dist > 15.0:
                     continue
                     
-                if locked_color != "unknown" and det_color != locked_color:
+                if locked_color != "unknown" and det_color != locked_color and det_color != "unknown":
                     if disappeared > 0:
                         continue  # Discard! A lost ball cannot re-appear as a completely different color (shoe/turf)
                     effective_dist += 150.0  # Penalize non-matching objects (putter heads/shadows)
@@ -303,8 +303,8 @@ class KalmanBallTracker(IBallTracker):
                     
                     # Color check: if color is locked, enforce strict matching
                     if locked_color != "unknown":
-                        if dist_from_anchor > 100.0 and det_color != locked_color:
-                            continue  # An escaping ball MUST match the locked color (reject shirt/shoe/shadow)
+                        if dist_from_anchor > 100.0 and det_color != locked_color and det_color != "unknown":
+                            continue  # An escaping ball can be motion-blurred ('unknown'), so do not discard it!
                         elif dist_from_anchor <= 100.0 and det_color != "unknown" and det_color != locked_color:
                             continue  # Within anchor zone, reject other known colors
  
