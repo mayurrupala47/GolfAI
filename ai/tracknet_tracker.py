@@ -4,62 +4,76 @@ import torch.nn.functional as F
 import numpy as np
 import cv2
 
-class ConvBNReLU(nn.Module):
-    def __init__(self, i, o, k=3, s=1, p=1):
-        super().__init__()
-        self.conv = nn.Conv2d(i, o, k, s, p, bias=False)
-        self.bn = nn.BatchNorm2d(o)
-        self.relu = nn.ReLU(inplace=True)
+class Conv2DBlock(nn.Module):
+    """ Conv2D + BN + ReLU """
+    def __init__(self, in_dim, out_dim, **kwargs):
+        super(Conv2DBlock, self).__init__(**kwargs)
+        self.conv = nn.Conv2d(in_dim, out_dim, kernel_size=3, padding='same', bias=False)
+        self.bn = nn.BatchNorm2d(out_dim)
+        self.relu = nn.ReLU()
+    
     def forward(self, x):
-        return self.relu(self.bn(self.conv(x)))
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.relu(x)
+        return x
 
-class DoubleConv(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super().__init__()
-        self.conv_1 = ConvBNReLU(in_ch, out_ch)
-        self.conv_2 = ConvBNReLU(out_ch, out_ch)
-    def forward(self, x):
-        return self.conv_2(self.conv_1(x))
+class Double2DConv(nn.Module):
+    """ Conv2DBlock x 2 """
+    def __init__(self, in_dim, out_dim):
+        super(Double2DConv, self).__init__()
+        self.conv_1 = Conv2DBlock(in_dim, out_dim)
+        self.conv_2 = Conv2DBlock(out_dim, out_dim)
 
-class TripleConv(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super().__init__()
-        self.conv_1 = ConvBNReLU(in_ch, out_ch)
-        self.conv_2 = ConvBNReLU(out_ch, out_ch)
-        self.conv_3 = ConvBNReLU(out_ch, out_ch)
     def forward(self, x):
-        return self.conv_3(self.conv_2(self.conv_1(x)))
+        x = self.conv_1(x)
+        x = self.conv_2(x)
+        return x
+    
+class Triple2DConv(nn.Module):
+    """ Conv2DBlock x 3 """
+    def __init__(self, in_dim, out_dim):
+        super(Triple2DConv, self).__init__()
+        self.conv_1 = Conv2DBlock(in_dim, out_dim)
+        self.conv_2 = Conv2DBlock(out_dim, out_dim)
+        self.conv_3 = Conv2DBlock(out_dim, out_dim)
+
+    def forward(self, x):
+        x = self.conv_1(x)
+        x = self.conv_2(x)
+        x = self.conv_3(x)
+        return x
 
 class TrackNetV3(nn.Module):
     def __init__(self):
-        super().__init__()
-        self.down_block_1 = DoubleConv(27, 64)
-        self.down_block_2 = DoubleConv(64, 128)
-        self.down_block_3 = TripleConv(128, 256)
-        self.bottleneck = TripleConv(256, 512)
-        
-        self.up_block_1 = TripleConv(768, 256)
-        self.up_block_2 = DoubleConv(384, 128)
-        self.up_block_3 = DoubleConv(192, 64)
-        self.predictor = nn.Conv2d(64, 8, kernel_size=1, bias=True)
-        self.pool = nn.MaxPool2d(2, 2)
+        super(TrackNetV3, self).__init__()
+        self.down_block_1 = Double2DConv(27, 64)
+        self.down_block_2 = Double2DConv(64, 128)
+        self.down_block_3 = Triple2DConv(128, 256)
+        self.bottleneck = Triple2DConv(256, 512)
+        self.up_block_1 = Triple2DConv(768, 256)
+        self.up_block_2 = Double2DConv(384, 128)
+        self.up_block_3 = Double2DConv(192, 64)
+        self.predictor = nn.Conv2d(64, 8, (1, 1))
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        d1 = self.down_block_1(x)
-        d2 = self.down_block_2(self.pool(d1))
-        d3 = self.down_block_3(self.pool(d2))
-        b = self.bottleneck(self.pool(d3))
-        
-        u1 = F.interpolate(b, scale_factor=2, mode='bilinear', align_corners=False)
-        u1 = self.up_block_1(torch.cat([u1, d3], dim=1))
-        
-        u2 = F.interpolate(u1, scale_factor=2, mode='bilinear', align_corners=False)
-        u2 = self.up_block_2(torch.cat([u2, d2], dim=1))
-        
-        u3 = F.interpolate(u2, scale_factor=2, mode='bilinear', align_corners=False)
-        u3 = self.up_block_3(torch.cat([u3, d1], dim=1))
-        
-        return torch.sigmoid(self.predictor(u3))
+        x1 = self.down_block_1(x)
+        x = nn.MaxPool2d((2, 2), stride=(2, 2))(x1)
+        x2 = self.down_block_2(x)
+        x = nn.MaxPool2d((2, 2), stride=(2, 2))(x2)
+        x3 = self.down_block_3(x)
+        x = nn.MaxPool2d((2, 2), stride=(2, 2))(x3)
+        x = self.bottleneck(x)
+        x = torch.cat([nn.Upsample(scale_factor=2)(x), x3], dim=1)
+        x = self.up_block_1(x)
+        x = torch.cat([nn.Upsample(scale_factor=2)(x), x2], dim=1)
+        x = self.up_block_2(x)
+        x = torch.cat([nn.Upsample(scale_factor=2)(x), x1], dim=1)
+        x = self.up_block_3(x)
+        x = self.predictor(x)
+        x = self.sigmoid(x)
+        return x
 
 import os
 
