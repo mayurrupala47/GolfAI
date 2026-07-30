@@ -241,6 +241,7 @@ class TrackNetEngine:
             cy = (hy + hh / 2.0) / self.infer_h * orig_h
             pos = (cx, cy)
             conf = float(np.max(heatmaps[-1]))
+            print(f"[DEBUG TrackNet] Raw detection: pos={pos}, conf={conf:.3f}")
         else:
             pos = None
             conf = 0.0
