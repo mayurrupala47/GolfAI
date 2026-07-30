@@ -247,7 +247,8 @@ class BallStateMachine:
                     if not self.holed:
                         self.holed = True
                         hole_complete = True
-                        logger.info(f"[Ball {self.track_id}] Ball entered cup/hole at ({eval_x:.1f}, {eval_y:.1f})! Hole complete with {self.stroke_count} stroke(s).")
+                        self.placed_on_tee = False  # Disable further strokes until ball is placed back on Tee
+                        logger.info(f"[Ball {self.track_id}] Ball entered cup/hole at ({eval_x:.1f}, {eval_y:.1f})! Hole complete with {self.stroke_count} stroke(s). Strokes disabled.")
                     return self.state, False, False, hole_complete, False
 
         stroke_detected = False
@@ -308,14 +309,21 @@ class BallStateMachine:
             else:
                 self.confirm_list.append((frame_idx, curr_x, curr_y))
                 if len(self.confirm_list) >= self.confirm_frames:
-                    # Stroke confirmed!
-                    self.stroke_count += 1
-                    stroke_detected = True
-                    self.state = BallState.MOVING
-                    self.settle_candidate_start = None
-                    self.last_resting_position = None
-                    logger.info(f"[Ball {self.track_id}] STROKE VALIDATED #{self.stroke_count}! "
-                                f"Ball moved away from anchor {self.anchor} to {pos} (dist: {d:.2f}px). State -> MOVING")
+                    if self.placed_on_tee:
+                        # Stroke confirmed!
+                        self.stroke_count += 1
+                        stroke_detected = True
+                        self.state = BallState.MOVING
+                        self.settle_candidate_start = None
+                        self.last_resting_position = None
+                        logger.info(f"[Ball {self.track_id}] STROKE VALIDATED #{self.stroke_count}! "
+                                    f"Ball moved away from anchor {self.anchor} to {pos} (dist: {d:.2f}px). State -> MOVING")
+                    else:
+                        # Moved before Tee placement — track movement but do not count a stroke
+                        self.state = BallState.MOVING
+                        self.settle_candidate_start = None
+                        self.last_resting_position = None
+                        logger.info(f"[Ball {self.track_id}] Ball moved before Tee placement. Not counting stroke. State -> MOVING")
 
         elif self.state == BallState.MOVING:
             if self.settle_candidate_start is None:
