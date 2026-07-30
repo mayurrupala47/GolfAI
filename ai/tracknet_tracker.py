@@ -68,8 +68,8 @@ class TrackNetEngine:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print(f"[TrackNetEngine] Initializing on {self.device}...")
         
-        self.infer_w = 640
-        self.infer_h = 360
+        self.infer_w = 512
+        self.infer_h = 288
         self.frame_buffer = []
         self.conf_threshold = conf_threshold
         
