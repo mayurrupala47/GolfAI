@@ -378,31 +378,8 @@ class KalmanBallTracker(IBallTracker):
                     matched_tids.add(tid)
                     continue
 
-                frames_on_anchor = self.tracks[tid].get("frames_on_anchor", 0) + 1
-                self.tracks[tid]["frames_on_anchor"] = frames_on_anchor
-                
-                # If anchored for > 3 seconds without real detection, drop the track
-                # EXCEPT if it's the pre-registered ball that hasn't seen a real detection yet
-                is_preregistered = self.tracks[tid].get("tee_preregistered", False)
-                anchor_timeout = int(self.fps * 3)  # 3 seconds
-                if frames_on_anchor > anchor_timeout and not is_preregistered:
-                    logger.info(f"[Tracker] Ball {tid} stuck on anchor at {anchor} for {frames_on_anchor} frames "
-                                f"(>{anchor_timeout}). Dropping track for re-detection.")
-                    # Reuse the same Ball ID on re-registration to preserve identity
-                    self.next_track_id = tid
-                    del self.tracks[tid]
-                    continue
-                
-                ax, ay = anchor
-                # Zero velocity so the state machine sees speed = 0
-                self.tracks[tid]["kf"].state[2] = 0.0
-                self.tracks[tid]["kf"].state[3] = 0.0
-                self.tracks[tid]["kf"].update(ax, ay)
-                r = 9.0  # half of expected ball diameter
-                self.tracks[tid]["bbox"] = (ax - r, ay - r, ax + r, ay + r)
-                self.tracks[tid]["disappeared"] = 0
-                matched_tids.add(tid)
-                continue
+                # If both are None, treat track as disappeared (do not force-inject anchor)
+                pass
 
             # --- Normal disappeared handling for MOVING / UNKNOWN tracks ---
             self.tracks[tid]["disappeared"] += 1
