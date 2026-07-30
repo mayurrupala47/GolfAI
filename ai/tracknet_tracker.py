@@ -73,6 +73,11 @@ class TrackNetEngine:
         self.frame_buffer = []
         self.conf_threshold = conf_threshold
         
+        # Warmup buffer to dynamically compute the static course background
+        self.warmup_frames = []
+        self.median_background = None
+        self.warmup_limit = 30
+        
         self.is_onnx = weights_path.endswith('.onnx')
         
         if self.is_onnx:
@@ -138,20 +143,31 @@ class TrackNetEngine:
     def update(self, frame):
         """
         Ingest a new frame and return the detected (cx, cy) and confidence.
-        Requires 9 frames to output a valid detection.
         """
         orig_h, orig_w = frame.shape[:2]
         prepped = self.preprocess(frame)
-        self.frame_buffer.append(prepped)
         
-        if len(self.frame_buffer) > 9:
+        # 1. Warmup: collect the first 30 frames to calculate the static background
+        if self.median_background is None:
+            self.warmup_frames.append(prepped)
+            if len(self.warmup_frames) >= self.warmup_limit:
+                self.median_background = np.median(self.warmup_frames, axis=0).astype(np.uint8)
+                self.warmup_frames = []  # Free memory
+                print(f"[TrackNetEngine] Median background image computed successfully from {self.warmup_limit} frames.")
+            else:
+                return None, 0.0
+                
+        # 2. Append sequence frames (max length 8)
+        self.frame_buffer.append(prepped)
+        if len(self.frame_buffer) > 8:
             self.frame_buffer.pop(0)
             
-        if len(self.frame_buffer) < 9:
+        if len(self.frame_buffer) < 8:
             return None, 0.0
             
-        # Stack 9 frames (HxWx27)
-        stacked = np.concatenate(self.frame_buffer, axis=2)
+        # 3. Construct 27-channel input: [median_background (3)] + [8 sequence frames (24)]
+        input_list = [self.median_background] + self.frame_buffer
+        stacked = np.concatenate(input_list, axis=2)
         
         if self.is_onnx:
             # ONNX Runtime Inference (keep float32)
