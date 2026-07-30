@@ -103,8 +103,8 @@ class BallStateMachine:
                     elif "tee" in name:
                         ry = region["y"]
                         self.tee_point_scaled = (rx * scale_x, ry * scale_y)
-                        # Proximity threshold for Tee reset (60px at 640x360 resolution for 99% accuracy)
-                        self.tee_reset_radius = 60.0
+                        # Proximity threshold for Tee reset (scaled calibration radius with buffer, e.g. 30px)
+                        self.tee_reset_radius = max(30.0, cal_r * 1.2)
                         
                 logger.info(f"[Ball {self.track_id}] Loaded target holes/cups (strict): {self.target_holes}")
                 if self.tee_point_scaled:
@@ -265,8 +265,8 @@ class BallStateMachine:
             return [anc[0] * (1. - alpha) + p[0] * alpha,
                     anc[1] * (1. - alpha) + p[1] * alpha]
 
-        # Reset stroke count if ball is placed back on Tee
-        if self.tee_point_scaled is not None:
+        # Reset stroke count if ball is placed back on Tee (only when resting/settling, not when moving!)
+        if self.tee_point_scaled is not None and self.state in [BallState.STOPPED, BallState.READY]:
             dist_to_tee = dist_func(pos, self.tee_point_scaled)
             if dist_to_tee <= self.tee_reset_radius:
                 if not self.placed_on_tee:
